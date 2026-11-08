@@ -48,6 +48,13 @@ import WebKit
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loading = false; error = "This page stopped responding. Reload to continue." }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
+        if url.scheme?.lowercased() == "solana" {
+            decisionHandler(.cancel); loading = false
+            if action.navigationType == .linkActivated,
+               action.sourceFrame.isMainFrame, WebPolicy.solanaPayment(url) { externalURL = url }
+            else { error = "Use a valid payment link to open your wallet." }
+            return
+        }
         // Subresources stay under normal WebKit security. Only top-level navigation changes app identity.
         if action.targetFrame?.isMainFrame == false { decisionHandler(.allow); return }
         guard WebPolicy.safe(url, for: app.url) else {
@@ -126,7 +133,10 @@ struct WebViewer: View {
             .padding(.trailing, 16).padding(.top, 8)
         }
         .confirmationDialog("Open outside Pocket?", isPresented: Binding(get: { session.externalURL != nil }, set: { if !$0 { session.externalURL = nil } }), titleVisibility: .visible) {
-            if let url = session.externalURL { Button("Open \(url.host ?? url.scheme ?? "link")") { openURL(url); session.externalURL = nil } }
+            if let url = session.externalURL { Button(WebPolicy.solanaPayment(url) ? "Open wallet" : "Open \(url.host ?? url.scheme ?? "link")") {
+                openURL(url) { accepted in if !accepted { session.error = "No app could open this link. Install a compatible wallet for Solana payments." } }
+                session.externalURL = nil
+            } }
             Button("Stay in Pocket", role: .cancel) { session.externalURL = nil }
         } message: { Text("This link opens another app. Your Pocket session and credentials are not shared.") }
     }

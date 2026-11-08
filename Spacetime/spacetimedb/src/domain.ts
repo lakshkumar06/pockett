@@ -1,3 +1,4 @@
+import {validateSolanaPayment} from './solana.ts';
 /** All durable state and authorization live in the Spacetime transaction. No network or filesystem. */
 export type RecordValue = Record<string, any>;
 export interface Store {
@@ -43,7 +44,8 @@ export function manifest(value:any) {
   return value;
 }
 export function validateSpec(s:any) {
-  if(!s||Object.keys(s).some(k=>!['name','summary','kind','fields','accent','appearance','actionLabel','emptyTitle','emptyBody'].includes(k)))fail(400,'Invalid app specification');
+  if(!s||Object.keys(s).some(k=>!['name','summary','kind','fields','accent','appearance','actionLabel','emptyTitle','emptyBody','payment'].includes(k)))fail(400,'Invalid app specification');
+  if(s.payment!==undefined){try{validateSolanaPayment(s.payment);}catch(e){fail(400,e instanceof Error?e.message:'Invalid Solana payment');}}
   text(s.name,60,'name');text(s.summary,160,'summary');
   if(!['list','tracker','poll'].includes(s.kind))fail(400,'Choose list, tracker, or poll');
   if(!Array.isArray(s.fields)||s.fields.length<1||s.fields.length>8)fail(400,'Use one to eight fields');
