@@ -1,8 +1,8 @@
-# Pockett
+# Pocket
 
 ## Overview
 
-Pockett turns a prompt into a small app you can open and share in Pocket on iPhone. Build through a messaging agent, an editor agent, or the terminal—and give your hosted web apps native iPhone capabilities through Pocket’s JavaScript bridge.
+Pocket turns a prompt into a small app you can open and share in Pocket on iPhone. Build through a messaging agent, an editor agent, or the terminal—and give your hosted web apps native iPhone capabilities through Pocket’s JavaScript bridge.
 
 It currently supports lists, number trackers, and polls with up to eight fields. Apps use a shared page template; their data lives in SpacetimeDB.
 
