@@ -1,3 +1,22 @@
+# Pockett
+
+Pocket's iPhone app and creator tools, with a Spacetime backend and a Nemotron miniapp builder. Photon connects the builder to messaging; Vultr can host the gateway and worker.
+
+**Start here:** [Setup and commands](docs/SETUP.md) · [Challenge fit and remaining proof](docs/TRACKS.md) · [Import provenance](IMPORT.md)
+
+- `Pocket/`, `PocketWidgets/`: original iOS app, now able to open generated apps with scoped access.
+- `Spacetime/`: durable product state, permissions and workflows.
+- `Runtime/`: HTTP gateway, fixed miniapp renderer, Nemotron tool loop and Photon worker.
+- `Developer/`: original CLI/SDK/MCP plus build, status, publish, open and cloud deployment commands.
+- `deploy/`: Vultr bootstrap, Docker Compose and HTTPS proxy.
+- `.env.example`: provider placeholders. `.env` is ignored.
+
+No live provider deployment is implied. The original Python backend below remains for reference and regression checks; run `Runtime/` for this version. See the setup guide for the tested local path and remaining live-provider checks.
+
+---
+
+## Imported Pocket documentation
+
 # Pocket
 
 Pocket is a personal home for creator-hosted web apps: save a website, pin it, reopen it, share its listing and receive consent-based updates in an activity inbox. Creators own their HTML, CSS, JavaScript, authentication, backend and database. Pocket does not host their code, proxy normal website traffic or store their application data.

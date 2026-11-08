@@ -1,3 +1,23 @@
+# Pockett implementation status — 2026-11-08
+
+Implemented and locally checked:
+
+- Spacetime 2.14 module with private tables, publisher-identity enforcement and transactional product logic.
+- Existing account/listing/sharing/notification REST flows through the new gateway.
+- Nemotron build/test/repair tool loop with persisted jobs and leases; configurable hosted model.
+- Photon 2.0 account pairing, persistent conversation context, received-message polling and idempotent replies.
+- CLI/MCP build, status, publish, open and Photon-link commands.
+- Vultr plan, price-capped provisioning and SSH runtime upload; Docker Compose HTTPS gateway and worker.
+- iPhone app automatically obtains per-app access when opening generated miniapps.
+
+Verification completed: existing local regression script, creator tests, runtime type checks and five runtime test groups; real local Spacetime flows including CLI build/status/publish/open; browser add/reload/remove at 390px and 1280px; iOS Simulator build succeeded. NVIDIA responses in tests are fixtures. Photon and Vultr calls are contract/preflight tests, not live deployments.
+
+Not configured: live NVIDIA model/key, Photon project/sender/channel, Vultr instance, Maincloud deployment and APNs. `.env` contains placeholders and is ignored. Setup: [docs/SETUP.md](docs/SETUP.md). Challenge evidence and eligibility limits: [docs/TRACKS.md](docs/TRACKS.md).
+
+---
+
+## Imported baseline status (historical)
+
 # Pocket verification status — November 3, 2026
 
 This describes the current hosted-web revamp. Previous native/runtime and mock-community visual results do not verify this build.
