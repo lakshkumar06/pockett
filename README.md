@@ -1,87 +1,105 @@
 # Pockett
 
-Pocket's iPhone app and creator tools, with a Spacetime backend and a Nemotron miniapp builder. Photon connects the builder to messaging; Vultr can host the gateway and worker.
+## Overview
 
-**Start here:** [Setup and commands](docs/SETUP.md) · [Challenge fit and remaining proof](docs/TRACKS.md) · [Import provenance](IMPORT.md)
+Pockett turns a prompt into a small app you can open and share in Pocket on iPhone. Build through a messaging agent, an editor agent, or the terminal.
 
-- `Pocket/`, `PocketWidgets/`: original iOS app, now able to open generated apps with scoped access.
-- `Spacetime/`: durable product state, permissions and workflows.
-- `Runtime/`: HTTP gateway, fixed miniapp renderer, Nemotron tool loop and Photon worker.
-- `Developer/`: original CLI/SDK/MCP plus build, status, publish, open and cloud deployment commands.
-- `deploy/`: Vultr bootstrap, Docker Compose and HTTPS proxy.
-- `.env.example`: provider placeholders. `.env` is ignored.
+It currently supports lists, number trackers, and polls with up to eight fields. Apps use a shared page template; their data lives in SpacetimeDB.
 
-No live provider deployment is implied. The original Python backend below remains for reference and regression checks; run `Runtime/` for this version. See the setup guide for the tested local path and remaining live-provider checks.
+## Architecture
 
----
+### Build through an agent
 
-## Imported Pocket documentation
+Send an idea through Photon messaging. The worker asks NVIDIA Nemotron to build and check the app. Send `publish` when it is ready to add it to Pocket.
 
-# Pocket
-
-Pocket is a personal home for creator-hosted web apps: save a website, pin it, reopen it, share its listing and receive consent-based updates in an activity inbox. Creators own their HTML, CSS, JavaScript, authentication, backend and database. Pocket does not host their code, proxy normal website traffic or store their application data.
-
-The app uses SwiftUI and WKWebView (iOS 17+), with a separate WidgetKit library launcher. The account and notification backend uses Python's standard library and SQLite. The creator CLI, browser/server SDKs and MCP tools use Node 24+ and TypeScript. This remains a local testing prototype, not a deployed service or an App Store approval claim.
-
-## Run locally
-
-```sh
-npm --prefix Developer ci --ignore-scripts
-python3 Backend/server.py
+```mermaid
+flowchart LR
+    chat["You in chat"] <-->|"Ideas, status, publish"| photon["Photon messaging"]
+    subgraph vultr ["Vultr server"]
+        worker["Worker: build and check apps"]
+        gateway["Web server: app pages and requests"]
+    end
+    worker <-->|"Poll messages and send replies"| photon
+    worker <-->|"Build and repair"| model["NVIDIA Nemotron"]
+    worker <-->|"Builds, results, publishing"| db[("SpacetimeDB Maincloud")]
+    phone["Pocket on iPhone"] <-->|"Open and use app over HTTPS"| gateway
+    gateway <-->|"Apps, access, saved entries"| db
 ```
 
-Open `Pocket.xcodeproj`, select Pocket and an iPhone simulator, then Run. Alternatively, `./scripts/run-simulator.sh [SIMULATOR_UUID]` builds and launches with local ad-hoc simulator signing (no paid membership). In Pocket's welcome screen, set **Test server** to `http://127.0.0.1:8787`, then create an account. The default database is `Backend/pocket.sqlite3`, ignored by Git. Restart the Python process after updating backend code.
+### Build through the terminal
 
-**Home → +** registers an existing website using the compatible basic `/apps` API. Open its details to pin it or share it with another Pocket username. Basic registration supports launching and sharing; notification integration requires a versioned creator manifest. See [creator setup](Developer/README.md), [the Little Notes walkthrough](Developer/examples/little-notes/README.md) and [backend setup](Backend/README.md).
+The CLI sends requests to the web server. The same worker builds the app; `publish` adds it to Pocket. An editor agent uses these same operations through the included MCP tools.
 
-For a physical phone, loopback addresses point to the phone itself. Use the Mac's reachable local network address for the Pocket test API on the same Wi-Fi; creator web-v1 URLs require HTTPS except for simulator loopback development. Existing basic HTTP listings remain compatible. Device signing and App Group provisioning are separate checks.
-
-## Product behavior
-
-- **Home:** pinned apps, recent apps, a Continue card, search and real owned/shared listings. Old device-local bookmarks remain under Earlier bookmarks; mock community discovery is retired.
-- **Activity:** unread state, app filters, pagination, exact authorized destinations and per-app notification settings. The inbox works without APNs and refreshes while Pocket is foregrounded.
-- **Viewer:** native back/close controls, loading and retry states, safe-area layout and a confirmation before external navigation. Creator layout, zoom and WebKit security remain intact. Pocket never injects account credentials, a native bridge or creator scripts.
-- **Reopening:** at most three live web views are kept in memory. A last same-origin URL can be stored per server/account/app; URLs containing common credential query fields or fragments are not persisted. Relaunch reloads a URL, not arbitrary page memory or unsaved forms. Website cookies/storage are ephemeral and disappear when the session is discarded. Sites may require login again.
-- **Isolation:** signing out, changing servers or switching Pocket accounts discards web sessions. Observed listing revocation closes its viewer and removes its local resume metadata. Sharing grants access to a Pocket listing, not to a creator's private website account or a public URL's availability. Foreground checks cannot instantly revoke a page while iOS suspends Pocket.
-- **Launcher widget:** medium/large app grids with pagination and backend-authorized deep links. It receives listing/icon metadata, never Pocket account credentials. Sign-out/server changes clear its snapshot. Both targets use `group.dev.local.pocket`; physical-device provisioning remains required.
-
-## Notifications
-
-A creator registers a web-v1 manifest, obtains an app-scoped credential and keeps it on their own backend. A user explicitly creates a five-minute pairing code in Pocket, then consents to pairing in the creator's website. That backend redeems the code for an opaque subscription ID. Events require the correct app credential, active listing access and subscription consent. Users can mute or disconnect an app.
-
-Targets are bounded origin-relative paths validated against the registered origin. Opening an inbox item or notification rechecks access with the backend; a push payload cannot select an arbitrary URL. Stable idempotency keys prevent duplicate events. The inbox retains at most 1,000 entries/account for 30 days, with pagination, rate limits and revocation cleanup. A changed registered origin invalidates notification credentials, subscriptions and inbox entries.
-
-Default delivery is explicitly **local test mode**: an accepted event is an inbox entry, not a delivered push. Optional APNs configuration and signing instructions are in [Backend/README.md](Backend/README.md). Website Web Push is not assumed to work inside WKWebView.
-
-## Local demo sequence
-
-Follow the [Little Notes setup](Developer/examples/little-notes/README.md) to start the local API, register the loopback manifest, create its private credential file and run its creator backend. Use Node 24+.
-
-1. Create two disposable Pocket accounts, `alice` and `bob`. Register Little Notes as Alice, then share its listing with Bob in Pocket. Sign in as Bob on the simulator and refresh Home.
-2. Open Little Notes, pin it, navigate to its note, close and reopen it. Its separate website demo password is `local-demo-password`. Pocket login does not authenticate the website.
-3. In the Pocket listing's details, choose Connect updates, confirm consent and copy the pairing code. In Little Notes, open Connect Pocket reminders, paste it and consent. Choose Send me this note in Pocket.
-4. Close the viewer, refresh Activity and open the unread entry. It resolves to `/notes/42?view=full#content`. Mute the subscription and verify new events are rejected; disconnect it and verify a new pairing is required.
-5. Re-register a same-origin manifest update as Alice: the app ID stays stable and revision advances. Revoke Bob's listing access, refresh Bob's app and verify the listing/inbox entry is unavailable. Sign out, then sign in as Alice: Bob's website session must not carry over. Test widget and notification links again after terminating Pocket.
-
-These are manual acceptance steps; completed automated checks and unverified UI/device steps are distinguished in [STATUS.md](STATUS.md).
-
-## Migration and checks
-
-SQLite migration 3 preserves existing users, sessions, web listing IDs, shares and native snapshots. `/experiences` is retired (410). Existing native listings appear as unsupported; their data is not silently deleted. Archived native Swift sources under `Pocket/RetiredNative/` are excluded from the shipped targets. Location permissions, background location and the route Live Activity are removed. The library launcher widget remains.
-
-```sh
-./scripts/check-local.sh
-python3 Tests/test_web_backend.py --http
+```mermaid
+flowchart LR
+    cli["Terminal CLI or editor agent"] -->|"Build, status, publish"| gateway
+    subgraph vultr ["Vultr server"]
+        gateway["Web server: app pages and requests"]
+        worker["Worker: build and check apps"]
+    end
+    gateway <-->|"Queue builds, publish, read and save data"| db[("SpacetimeDB Maincloud")]
+    worker <-->|"Pick up builds and save results"| db
+    worker <-->|"Build and repair"| model["NVIDIA Nemotron"]
+    phone["Pocket on iPhone"] <-->|"Open and use app over HTTPS"| gateway
 ```
 
-The checks include the creator TypeScript/browser build and actual backend/example integrations, shared web fixtures, Swift URL/deep-link/storage checks, widget regression tests, migration/notification tests, and archived native validation/storage regressions. The default shell must use Node 24+. See [STATUS.md](STATUS.md) for the simulator build and current verification boundaries.
+Caddy handles HTTPS on Vultr. SpacetimeDB stores accounts, access rules, builds, and app data. Apps read and save through the web server; visible apps refresh shared data every five seconds.
 
-### Visual design and type
+## Deploy apps
 
-Pocket's native interface uses the cream, forest and lime Field Notes direction, with adaptive dark colors and Dynamic Type-aware Cal Sans Text UI. The three bundled fonts are open source (SIL OFL 1.1); provenance and license live in `Pocket/Fonts/`. They load locally and do not affect creator-hosted pages. The welcome illustration is rendered as native vectors. Native forms and navigation retain system accessibility behavior.
+### 1. Set up Pocket once
 
-Font research: [Cal Sans release history and optical sizes](https://cal.com/font) and [Geist Pixel launch, February 2026](https://vercel.com/blog/introducing-geist-pixel). Cal's UI cut was selected for readable continuous text and a warmer geometric character; Pixel's grid texture did not suit this interface. See `STATUS.md` for build and physical-device verification boundaries.
+You need Node 24+, Spacetime CLI 2.14+, and an Ubuntu Vultr server with Docker, Compose v2, and working root SSH. Point your domain to the server and allow ports 80 and 443.
 
-App icons use creator manifest artwork when it is a supported raster image; otherwise Pocket displays a bundled pictogram. Original prototype Lucide icons are bundled as vector assets (license included). Icon downloads use isolated ephemeral HTTPS requests with a 512 KiB limit and 256-pixel decoding bound. Profile and per-app notification settings use custom SwiftUI layouts with native accessible controls.
+From this repository:
 
-The current visual direction is **Folded Worlds**: original bundled abstract sculpture imagery leads Home and welcome, with a quieter companion on Profile and the empty inbox. Live SwiftUI controls and compact app rows sit around the imagery. Art direction, concept-versus-device evidence, asset paths and generation prompts are documented in `Design/ArtDirection/README.md`.
+```sh
+npm ci --prefix Developer
+npm ci --prefix Spacetime/spacetimedb
+cp -n .env.example .env
+spacetime login
+```
+
+Set `NVIDIA_API_KEY` and `NEMOTRON_MODEL` in `.env`, then deploy:
+
+```sh
+npm --prefix Developer run deploy -- pocket.example.com --host YOUR_VULTR_IP
+```
+
+This publishes the database to SpacetimeDB Maincloud, starts the web server and worker on Vultr, and checks their connection. Run `npm --prefix Developer run deploy` again for updates or retries.
+
+For a new server, editor setup, or troubleshooting, see [deployment details](docs/DEPLOY.md). For local development, see [local setup](docs/SETUP.md).
+
+### 2. Build and publish an app
+
+Open `Pocket.xcodeproj` in Xcode and run Pocket on an iPhone or simulator. Set **Profile → Test server** to your deployed HTTPS URL and create an account.
+
+In the terminal, replace the example domain and username. Login reads your password from `POCKET_PASSWORD`; this zsh command keeps it out of history:
+
+```sh
+read -s 'POCKET_PASSWORD?Pocket password: '; export POCKET_PASSWORD
+node Developer/src/cli.ts login --backend https://pocket.example.com --username YOU
+unset POCKET_PASSWORD
+node Developer/src/cli.ts build 'A shared grocery list' --backend https://pocket.example.com
+node Developer/src/cli.ts status BUILD_ID --backend https://pocket.example.com
+node Developer/src/cli.ts publish BUILD_ID --backend https://pocket.example.com
+node Developer/src/cli.ts open APP_ID --backend https://pocket.example.com
+```
+
+Use the build ID returned by `build`. Wait for `status` to say `ready`, then publish and use the returned app ID. `open` prints a private link. Publishing uses the existing server and database.
+
+**Through messaging:** configure the three `PHOTON_*` values in `.env` for your Photon project and agent sender, then redeploy. After CLI login, run:
+
+```sh
+node Developer/src/cli.ts connect-photon --backend https://pocket.example.com
+```
+
+Send the returned `link CODE` to your agent within five minutes. Then send `build a grocery list`, `status`, and `publish`. Use `change add a quantity field` to revise it.
+
+**Through an editor agent:** [connect the MCP tools](docs/DEPLOY.md#use-it-from-your-editor-through-mcp), then ask it to build, check status, and publish using your backend URL.
+
+## A few notes
+
+- These are small generated apps, not deployments of arbitrary source code. Existing websites can also be [added to Pocket](Developer/README.md#cli), with their own hosting.
+- Keep `.env` and private app links private. Share through Pocket to give someone their own access.
+- `Pocket/` is the iPhone app, `Developer/` holds the CLI and editor tools, `Runtime/` runs the web server and worker, and `Spacetime/` holds data and access rules. `Backend/` is the older Python backend.
