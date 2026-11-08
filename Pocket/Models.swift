@@ -28,12 +28,14 @@ enum Catalog {
         Community(id: "makers", name: "Weekend makers", icon: "hammer.fill", summary: "Small things worth sharing.", members: 38),
         Community(id: "everyday", name: "Everyday club", icon: "sun.max.fill", summary: "Useful things for ordinary days.", members: 16)
     ]
-    // Public third-party sites for the local demo; no affiliation or ownership implied.
+    // Public third-party sites for the starter library; no affiliation or ownership implied.
     static let apps = [
-        MiniApp(id: "hextris", name: "Hextris", icon: "hexagon.fill", url: URL(string: "https://hextris.io")!, community: "after-hours", summary: "One more round with your friends."),
-        MiniApp(id: "excalidraw", name: "Excalidraw", icon: "pencil.and.outline", url: URL(string: "https://excalidraw.com")!, community: "makers", summary: "A shared space for your next idea."),
-        MiniApp(id: "2048", name: "2048", icon: "square.grid.2x2.fill", url: URL(string: "https://play2048.co")!, community: "after-hours", summary: "A tiny puzzle for your downtime."),
-        MiniApp(id: "wikipedia", name: "Wikipedia", icon: "book.fill", url: URL(string: "https://en.m.wikipedia.org")!, community: "everyday", summary: "Follow your curiosity somewhere new.")
+        MiniApp(id: "excalidraw", name: "Excalidraw", icon: "pencil.and.outline", url: URL(string: "https://excalidraw.com")!, community: "makers", summary: "Sketch diagrams and ideas."),
+        MiniApp(id: "wikipedia", name: "Wikipedia", icon: "book.fill", url: URL(string: "https://en.m.wikipedia.org")!, community: "everyday", summary: "Read and explore articles."),
+        MiniApp(id: "photopea", name: "Photopea", icon: "photo", url: URL(string: "https://www.photopea.com")!, community: "makers", summary: "Edit images in the browser."),
+        MiniApp(id: "pomofocus", name: "Pomofocus", icon: "timer", url: URL(string: "https://pomofocus.io")!, community: "everyday", summary: "Run a simple focus timer."),
+        MiniApp(id: "diagrams", name: "diagrams.net", icon: "point.3.connected.trianglepath.dotted", url: URL(string: "https://app.diagrams.net")!, community: "makers", summary: "Build flowcharts and diagrams."),
+        MiniApp(id: "2048", name: "2048", icon: "square.grid.2x2.fill", url: URL(string: "https://play2048.co")!, community: "after-hours", summary: "Play the original number puzzle.")
     ]
 }
 

@@ -23,7 +23,7 @@ import WebKit
         webView.navigationDelegate = self; webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.isOpaque = false; webView.backgroundColor = .systemBackground
+        webView.isOpaque = false; webView.backgroundColor = .black
         observation = webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] view, _ in
             Task { @MainActor in self?.canGoBack = view.canGoBack }
         }
@@ -100,46 +100,47 @@ struct WebViewer: View {
     @Environment(\.openURL) private var openURL
     var body: some View {
         ZStack {
-            // Extend the actual web view, not a matching native background, to every edge.
-            // Keep keyboard avoidance while letting the page own its safe-area layout.
             WebSurface(session: session)
                 .ignoresSafeArea(.container, edges: .all)
-        }
-            .overlay {
-                if let error = session.error {
-                    ContentUnavailableView {
-                        Label("Couldn't open this page", systemImage: "wifi.exclamationmark")
-                    } description: { Text(error) } actions: {
-                        Button("Try again") { session.reload() }.buttonStyle(.borderedProminent)
-                        Button("Open app home") { session.load(session.app.url) }
-                    }.background(PocketStyle.canvas)
+            if let error = session.error {
+                ContentUnavailableView {
+                    Label("Couldn’t open this page", systemImage: "wifi.exclamationmark")
+                } description: { Text(error) } actions: {
+                    Button("Try again") { session.reload() }.buttonStyle(.borderedProminent)
+                    Button("Open app home") { session.load(session.app.url) }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(PocketStyle.canvas)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                HStack(spacing: 12) {
-                    Button { session.webView.goBack() } label: {
-                        Image(systemName: "chevron.left").frame(width: 44, height: 44)
-                    }.disabled(!session.canGoBack).accessibilityLabel("Go back")
-                    VStack(spacing: 2) {
-                        Text(session.app.name).font(.pocketCaption).lineLimit(1)
-                        if session.loading { ProgressView().controlSize(.mini).accessibilityLabel("Loading page") }
-                    }.frame(maxWidth: .infinity)
-                    Menu {
-                        Button("Reload app", systemImage: "arrow.clockwise") { session.reload() }
-                        Button("App home", systemImage: "house") { session.load(session.app.url) }
-                        ShareLink(item: session.app.deepLink) { Label("Share Pocket link", systemImage: "square.and.arrow.up") }
-                    } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
-                        .accessibilityLabel("App options")
-                    Button { PocketHaptics.tap(); dismiss() } label: {
-                        Image(systemName: "xmark").frame(width: 44, height: 44)
-                    }.accessibilityLabel("Return to Pocket")
-                }.font(.body).foregroundStyle(PocketStyle.ink)
-                    .padding(.horizontal, 12).padding(.vertical, 4)
-                    .background(.regularMaterial)
+        }
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 4) {
+                Button { session.webView.goBack() } label: {
+                    Image(systemName: "chevron.left").frame(width: 42, height: 42)
+                }.disabled(!session.canGoBack).accessibilityLabel("Go back")
+                VStack(spacing: 1) {
+                    Text(session.app.name).font(.pocketCaption).lineLimit(1)
+                    if session.loading { ProgressView().controlSize(.mini).accessibilityLabel("Loading page") }
+                }.frame(maxWidth: .infinity)
+                Menu {
+                    Button("Reload app", systemImage: "arrow.clockwise") { session.reload() }
+                    Button("App home", systemImage: "house") { session.load(session.app.url) }
+                    ShareLink(item: session.app.deepLink) { Label("Share Pocket link", systemImage: "square.and.arrow.up") }
+                } label: { Image(systemName: "ellipsis").frame(width: 42, height: 42) }
+                    .accessibilityLabel("App options")
+                Button { PocketHaptics.tap(); dismiss() } label: {
+                    Image(systemName: "xmark").frame(width: 42, height: 42)
+                }.accessibilityLabel("Return to Pocket")
             }
-            .confirmationDialog("Open outside Pocket?", isPresented: Binding(get: { session.externalURL != nil }, set: { if !$0 { session.externalURL = nil } }), titleVisibility: .visible) {
-                if let url = session.externalURL { Button("Open \(url.host ?? url.scheme ?? "link")") { openURL(url); session.externalURL = nil } }
-                Button("Stay in Pocket", role: .cancel) { session.externalURL = nil }
-            } message: { Text("This link opens another app. Your Pocket session and credentials are not shared.") }
+            .font(.body).foregroundStyle(PocketStyle.ink)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(PocketStyle.line))
+            .padding(.horizontal, 12).padding(.bottom, 8)
+        }
+        .confirmationDialog("Open outside Pocket?", isPresented: Binding(get: { session.externalURL != nil }, set: { if !$0 { session.externalURL = nil } }), titleVisibility: .visible) {
+            if let url = session.externalURL { Button("Open \(url.host ?? url.scheme ?? "link")") { openURL(url); session.externalURL = nil } }
+            Button("Stay in Pocket", role: .cancel) { session.externalURL = nil }
+        } message: { Text("This link opens another app. Your Pocket session and credentials are not shared.") }
     }
 }

@@ -24,6 +24,17 @@ struct HomeState: Codable {
     var pinned: Set<String> = []
     var recent: [String] = []
     var lastURLs: [String: URL] = [:]
+    var lastOpened: [String: Date] = [:]
+
+    private enum CodingKeys: String, CodingKey { case pinned, recent, lastURLs, lastOpened }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        pinned = try values.decodeIfPresent(Set<String>.self, forKey: .pinned) ?? []
+        recent = try values.decodeIfPresent([String].self, forKey: .recent) ?? []
+        lastURLs = try values.decodeIfPresent([String: URL].self, forKey: .lastURLs) ?? [:]
+        lastOpened = try values.decodeIfPresent([String: Date].self, forKey: .lastOpened) ?? [:]
+    }
 }
 
 @MainActor final class HomeStore: ObservableObject {
@@ -44,7 +55,13 @@ struct HomeState: Codable {
         else if state.pinned.count < 100 { state.pinned.insert(id) }
         persist()
     }
-    func opened(_ id: String) { state.recent.removeAll { $0 == id }; state.recent.insert(id, at: 0); state.recent = Array(state.recent.prefix(100)); persist() }
+    func opened(_ id: String) {
+        state.recent.removeAll { $0 == id }
+        state.recent.insert(id, at: 0)
+        state.recent = Array(state.recent.prefix(100))
+        state.lastOpened[id] = Date()
+        persist()
+    }
     func remember(_ url: URL, app: String, entry: URL) {
         guard identity != nil, WebPolicy.restorable(url, for: entry) else { return }
         if state.lastURLs.count < 100 || state.lastURLs[app] != nil { state.lastURLs[app] = url; persist() }
@@ -54,8 +71,11 @@ struct HomeState: Codable {
         return url
     }
     func retain(_ ids: Set<String>) {
-        state.pinned.formIntersection(ids); state.recent.removeAll { !ids.contains($0) }
-        state.lastURLs = state.lastURLs.filter { ids.contains($0.key) }; persist()
+        let retained = ids.union(Catalog.apps.map(\.id))
+        state.pinned.formIntersection(ids); state.recent.removeAll { !retained.contains($0) }
+        state.lastURLs = state.lastURLs.filter { retained.contains($0.key) }
+        state.lastOpened = state.lastOpened.filter { retained.contains($0.key) }
+        persist()
     }
     private func persist() { guard let identity, let data = try? JSONEncoder().encode(state) else { return }; defaults.set(data, forKey: identity) }
 }

@@ -5,7 +5,14 @@ import SwiftUI
     @StateObject private var store = Store()
     @StateObject private var backend = Backend()
     var body: some Scene {
-        WindowGroup { SessionView().environmentObject(store).environmentObject(backend).tint(PocketStyle.accent).font(.pocketBody) }
+        WindowGroup {
+            SessionView()
+                .environmentObject(store)
+                .environmentObject(backend)
+                .tint(PocketStyle.accent)
+                .font(.pocketBody)
+                .preferredColorScheme(.dark)
+        }
     }
 }
 
@@ -20,6 +27,8 @@ struct SessionView: View {
         Group {
             if restoring {
                 ProgressView("Opening Pocket…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
             } else if backend.username != nil {
                 RootView().environmentObject(backend.home).id(backend.identity)
             } else {

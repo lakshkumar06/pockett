@@ -1,5 +1,17 @@
 import SwiftUI
 import Security
+import PhotosUI
+
+struct GeneratedAppSpec: Codable, Hashable {
+    struct Appearance: Codable, Hashable {
+        let icon: String?
+        let theme: String?
+        let background: String?
+        let layout: String?
+    }
+
+    let appearance: Appearance?
+}
 
 struct RegisteredApp: Identifiable, Codable, Hashable {
     let id: String
@@ -10,6 +22,7 @@ struct RegisteredApp: Identifiable, Codable, Hashable {
     let revision: Int?
     let creatorKey: String?
     let manifest: WebManifest?
+    let spec: GeneratedAppSpec?
     let generated: Bool?
     let supported: Bool?
     let summary: String
@@ -21,6 +34,8 @@ private struct AuthReply: Decodable { let token: String; let username: String }
 private struct AppsReply: Decodable { let apps: [RegisteredApp] }
 private struct UserReply: Decodable { let username: String }
 private struct AccessReply: Decodable { let url: URL }
+private struct BuildJobReply: Decodable { let id: String; let status: String; let error: String? }
+private struct PublishReply: Decodable { let appId: String }
 private struct OKReply: Decodable { let ok: Bool }
 private struct ErrorReply: Decodable { let error: String }
 
@@ -244,10 +259,37 @@ func isRequestCancellation(_ error: Error) -> Bool {
                 pendingURL = incoming; error = nil
         address = value; UserDefaults.standard.set(value, forKey: "pocket.server")
     }
-    func register(name: String, url: String, summary: String) async -> Bool {
-        await perform {
-            let _: RegisteredApp = try await self.request("apps", method: "POST", body: ["name": name, "url": url, "summary": summary])
+    func register(name: String, url: String, summary: String) async -> RegisteredApp? {
+        var created: RegisteredApp?
+        let succeeded = await perform {
+            created = try await self.request("apps", method: "POST", body: ["name": name, "url": url, "summary": summary])
             try await self.fetchApps()
+        }
+        return succeeded ? created : nil
+    }
+    func createMiniApp(prompt: String, icon: String, theme: String, background: String, layout: String) async -> Bool {
+        await perform {
+            var request = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            let choices = [("icon", icon), ("color theme", theme), ("background", background), ("item layout", layout)]
+                .filter { $0.1 != "Automatic" }
+                .map { "\($0.0): \($0.1)" }
+            if !choices.isEmpty { request += "\nAppearance preferences: " + choices.joined(separator: ", ") + "." }
+            let created: BuildJobReply = try await self.request("jobs", method: "POST", body: ["prompt": request])
+            let clock = ContinuousClock(), deadline = clock.now.advanced(by: .seconds(120))
+            while clock.now < deadline {
+                try Task.checkCancellation()
+                let job: BuildJobReply = try await self.request("jobs/\(created.id)")
+                if job.status == "ready" {
+                    let _: PublishReply = try await self.request("jobs/\(created.id)/publish", method: "POST", body: [:])
+                    try await self.fetchApps()
+                    return
+                }
+                if job.status == "failed" {
+                    throw self.failure(job.error ?? "Pocket couldn't build this app. Try describing it another way.")
+                }
+                try await Task.sleep(for: .seconds(2))
+            }
+            throw self.failure("This build is taking longer than expected. It is still saved on the server.")
         }
     }
     func share(_ app: RegisteredApp, with recipient: String) async -> Bool {
@@ -262,6 +304,15 @@ func isRequestCancellation(_ error: Error) -> Bool {
             try await self.fetchApps()
         }
     }
+    func delete(_ app: RegisteredApp) async -> Bool {
+        guard app.owner == username else { error = "Only the app owner can delete this listing."; return false }
+        return await perform {
+            let _: OKReply = try await self.request("apps/\(app.id)", method: "DELETE")
+            WebSessionPool.shared.remove(app.id)
+            CustomAppIconStore.remove(app.id)
+            try await self.fetchApps()
+        }
+    }
 
 }
 
@@ -270,104 +321,420 @@ struct AccountForm: View {
     @State private var username = ""
     @State private var password = ""
     @State private var signup = false
+    @State private var showPassword = false
+    @State private var submitted = false
     @State private var server = ""
-    @ObservedObject private var notifications = PocketNotifications.shared
+    @FocusState private var focused: Field?
+    private enum Field { case username, password }
+
     var body: some View {
-        List {
-            if let user = backend.username {
-                Section {
-                    HStack(spacing: 16) {
-                        AppMark(name: user, size: 64)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(user).font(.pocketTitle)
-                            Text("Your Pocket account").font(.pocketSubheadline).foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                Text(signup ? "Create account" : "Sign in").font(.pocketDisplay)
+
+                Picker("Account", selection: $signup) {
+                    Text("Sign in").tag(false)
+                    Text("Create account").tag(true)
+                }.pickerStyle(.segmented)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    TextField("", text: $username, prompt: Text("Username").foregroundStyle(PocketStyle.secondaryInk))
+                        .textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .focused($focused, equals: .username).submitLabel(.next)
+                        .onSubmit { focused = .password }
+                        .pocketField()
+                    if submitted && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Enter your username.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                    }
+
+                    HStack(spacing: 8) {
+                        Group {
+                            if showPassword {
+                                TextField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
+                            } else {
+                                SecureField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
+                            }
                         }
-                    }.padding(.vertical, 12)
-                    LabeledContent("Registered apps", value: "\(backend.apps.filter { $0.owner == user }.count)")
-                    LabeledContent("Shared with you", value: "\(backend.apps.filter { $0.owner != user }.count)")
-                    Button("Sign out") { Task { await backend.logout() } }
-                }
-            } else {
-                Section {
-                    VStack(alignment: .leading, spacing: 16) {
-                        PocketArt(name: "pocket-folded-world").frame(height: 270).clipped().padding(.horizontal, -20)
-                        Text("Small apps.\nA place of their own.").font(.pocketDisplay).tracking(-0.8).foregroundStyle(PocketStyle.ink)
-                        Text("Your apps, saved places, and little everyday tools. All in Pocket.")
-                            .font(.pocketBody).foregroundStyle(.secondary)
-                    }.padding(.vertical, 20)
-                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
-                Section {
-                    Picker("Account", selection: $signup) {
-                        Text("Sign in").tag(false)
-                        Text("Create account").tag(true)
-                    }.pickerStyle(.segmented)
-                    TextField("Username", text: $username).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    SecureField("Password (8+ characters)", text: $password).textContentType(signup ? .newPassword : .password)
-                    Button(signup ? "Create account" : "Sign in") {
-                        Task {
-                            await backend.authenticate(username: username, password: password, signup: signup)
-                            if backend.username != nil { password = ""; PocketHaptics.success() }
-                        }
-                    }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
-                        .frame(maxWidth: .infinity).padding(.vertical, 8)
-                        .disabled(username.isEmpty || password.count < 8)
-                    if backend.busy { ProgressView("Signing in…") }
-                    if let error = backend.error {
-                        Text(error).font(.pocketSubheadline).foregroundStyle(.red)
+                        .focused($focused, equals: .password).submitLabel(.go)
+                        .onSubmit { authenticate() }
+                        Button { showPassword.toggle() } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye").frame(width: 32, height: 32)
+                        }.accessibilityLabel(showPassword ? "Hide password" : "Show password")
+                    }.pocketField()
+                    if submitted && password.count < 8 {
+                        Text("Use at least 8 characters.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
                     }
                 }
-            }
-            if backend.username != nil {
-            Section("Notifications") {
-                Text(notifications.status)
-                Button("Enable device notifications") { Task { await PocketNotifications.shared.requestPermission() } }
-                Text("Activity refreshes while Pocket is open. Website Web Push is not connected to this inbox.").font(.pocketCaption).foregroundStyle(.secondary)
-            }
-            Section("Home Screen widget") {
-                Text("Touch and hold your Home Screen, tap Edit → Add Widget, then choose Pocket.")
-                Text("The widget shows your apps and apps shared with you. Refresh Home to update its list.").font(.pocketCaption).foregroundStyle(.secondary)
-            }
-            }
-            Section {
-                DisclosureGroup("Test server") {
-                TextField("Server address", text: $server).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                Button("Use this server") { backend.changeServer(server) }.disabled(server == backend.address)
-                Text("Use the same server on both devices. Changing servers signs you out.").font(.pocketCaption).foregroundStyle(.secondary)
+
+                Button(action: authenticate) {
+                    PrimaryButtonLabel(title: backend.busy ? "Signing in…" : (signup ? "Create account" : "Sign in"))
+                }.buttonStyle(PocketPressStyle()).disabled(backend.busy)
+
+                if let error = backend.error {
+                    Label(error, systemImage: "exclamationmark.circle")
+                        .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
                 }
+
+                DisclosureGroup("Connection") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        TextField("", text: $server, prompt: Text("Server address").foregroundStyle(PocketStyle.secondaryInk))
+                            .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().pocketField()
+                        Button("Use this server") { backend.changeServer(server) }.disabled(server == backend.address)
+                        Text("Changing servers signs you out.").font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk)
+                    }.padding(.top, 10)
+                }
+                .font(.pocketHeadline)
             }
-        }.pocketList().navigationTitle(backend.username == nil ? "Pocket" : "Profile")
-            .navigationBarTitleDisplayMode(.inline).disabled(backend.busy)
-            .sensoryFeedback(.selection, trigger: signup)
-            .onAppear { server = backend.address }
+            .padding(.horizontal, 20).padding(.top, 28).padding(.bottom, 48)
+            .frame(maxWidth: 520).frame(maxWidth: .infinity)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
+        .toolbar(.hidden, for: .navigationBar)
+        .sensoryFeedback(.selection, trigger: signup)
+        .onAppear { server = backend.address }
+    }
+
+    private func authenticate() {
+        submitted = true
+        let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanUsername.isEmpty, password.count >= 8, !backend.busy else { return }
+        focused = nil
+        Task {
+            await backend.authenticate(username: cleanUsername, password: password, signup: signup)
+            if backend.username != nil { password = ""; PocketHaptics.success() }
+        }
     }
 }
 
 struct AddAppView: View {
     @EnvironmentObject private var backend: Backend
     @Environment(\.dismiss) private var dismiss
+    let importMode: Bool
+    let onAdded: () -> Void
+
+    init(importMode: Bool = false, onAdded: @escaping () -> Void = {}) {
+        self.importMode = importMode
+        self.onAdded = onAdded
+    }
+
+    var body: some View {
+        NavigationStack {
+            if importMode {
+                ExistingAppView(title: "Import app", buttonTitle: "Import app") { finish() }
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Add app").font(.pocketDisplay)
+                        VStack(spacing: 12) {
+                            NavigationLink { CreateMiniAppView { finish() } } label: {
+                                AddAppChoice(icon: "plus", title: "Create with agent", accent: PocketStyle.accent)
+                            }
+                            NavigationLink { ExistingAppView { finish() } } label: {
+                                AddAppChoice(icon: "arrow-up-right", title: "Add existing app", accent: PocketStyle.elevated)
+                            }
+                        }.buttonStyle(PocketPressStyle())
+                    }
+                    .padding(20).frame(maxWidth: 540).frame(maxWidth: .infinity)
+                }
+                .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
+                .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            }
+        }
+        .interactiveDismissDisabled(backend.busy)
+    }
+
+    private func finish() {
+        onAdded()
+        dismiss()
+    }
+}
+
+private struct AddAppChoice: View {
+    let icon: String
+    let title: String
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 14) {
+            PocketIcon(icon, size: 22).foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .background(accent, in: RoundedRectangle(cornerRadius: 12))
+            Text(title).font(.pocketHeadline).foregroundStyle(PocketStyle.ink)
+            Spacer()
+            PocketIcon("chevron-right", size: 18).foregroundStyle(PocketStyle.secondaryInk)
+        }
+        .padding(14)
+        .background(PocketStyle.surface, in: RoundedRectangle(cornerRadius: PocketStyle.cardRadius))
+        .overlay(RoundedRectangle(cornerRadius: PocketStyle.cardRadius).stroke(PocketStyle.line))
+    }
+}
+
+private struct CreateMiniAppView: View {
+    @EnvironmentObject private var backend: Backend
+    let finished: () -> Void
+    @State private var prompt = ""
+    @State private var icon = "Automatic"
+    @State private var theme = "Automatic"
+    @State private var background = "Automatic"
+    @State private var layout = "Automatic"
+    @FocusState private var focused: Bool
+    private let icons: [CreationIconOption] = [
+        .init(title: "Automatic", asset: nil),
+        .init(title: "Check", asset: "check"),
+        .init(title: "Notebook", asset: "notebook-pen"),
+        .init(title: "Calendar", asset: "calendar-days"),
+        .init(title: "Wallet", asset: "wallet"),
+        .init(title: "Timer", asset: "timer"),
+        .init(title: "Book", asset: "book-open"),
+        .init(title: "Person", asset: "user-round"),
+        .init(title: "Grid", asset: "grid-2x2"),
+        .init(title: "Inbox", asset: "inbox"),
+        .init(title: "Bell", asset: "bell")
+    ]
+    private let themes = ["Automatic", "Forest", "Ember", "Ocean", "Violet", "Paper"]
+    private let backgrounds = ["Automatic", "Soft glow", "Color mesh", "Fine grid", "Plain"]
+    private let layouts = ["Automatic", "Cards", "Rows"]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Create app").font(.pocketDisplay)
+                TextField("", text: $prompt, prompt: Text("Describe the app you need").foregroundStyle(PocketStyle.secondaryInk), axis: .vertical)
+                    .lineLimit(4...8).focused($focused).pocketField()
+
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("App icon").font(.pocketHeadline)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                        ForEach(icons) { option in
+                            Button {
+                                icon = option.title
+                                PocketHaptics.selection()
+                            } label: {
+                                VStack(spacing: 7) {
+                                    Group {
+                                        if let asset = option.asset {
+                                            PocketIcon(asset, size: 22)
+                                        } else {
+                                            Image(systemName: "wand.and.stars").font(.system(size: 20, weight: .medium))
+                                        }
+                                    }
+                                    .frame(height: 24)
+                                    Text(option.title).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                                }
+                                .foregroundStyle(icon == option.title ? Color.white : PocketStyle.ink)
+                                .frame(maxWidth: .infinity, minHeight: 64)
+                                .background(icon == option.title ? PocketStyle.accent : PocketStyle.elevated, in: RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(icon == option.title ? PocketStyle.accent : PocketStyle.line))
+                            }
+                            .buttonStyle(PocketPressStyle())
+                            .accessibilityLabel(option.title + " icon")
+                            .accessibilityAddTraits(icon == option.title ? .isSelected : [])
+                        }
+                    }
+                    VStack(spacing: 4) {
+                        darkPicker("Color", selection: $theme, values: themes)
+                        darkPicker("Background", selection: $background, values: backgrounds)
+                        darkPicker("Layout", selection: $layout, values: layouts)
+                    }
+                }
+                .padding(14)
+                .background(PocketStyle.surface, in: RoundedRectangle(cornerRadius: PocketStyle.cardRadius))
+                .overlay(RoundedRectangle(cornerRadius: PocketStyle.cardRadius).stroke(PocketStyle.line))
+
+                Button {
+                    focused = false
+                    Task {
+                        if await backend.createMiniApp(prompt: prompt, icon: icon, theme: theme, background: background, layout: layout) {
+                            PocketHaptics.success(); finished()
+                        }
+                    }
+                } label: {
+                    PrimaryButtonLabel(title: backend.busy ? "Building app…" : "Create app")
+                }
+                .buttonStyle(PocketPressStyle())
+                .disabled(backend.busy || prompt.trimmingCharacters(in: .whitespacesAndNewlines).count < 8)
+
+                if let error = backend.error {
+                    Label(error, systemImage: "exclamationmark.circle")
+                        .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                }
+            }
+            .padding(20).frame(maxWidth: 540).frame(maxWidth: .infinity)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
+        .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(backend.busy)
+        .disabled(backend.busy)
+        .onAppear { focused = true }
+    }
+
+    private func darkPicker(_ title: String, selection: Binding<String>, values: [String]) -> some View {
+        HStack {
+            Text(title).font(.pocketBody).foregroundStyle(PocketStyle.secondaryInk)
+            Spacer()
+            Picker("", selection: selection) {
+                ForEach(values, id: \.self) { Text($0) }
+            }
+            .labelsHidden()
+            .tint(PocketStyle.accent)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct CreationIconOption: Identifiable {
+    let title: String
+    let asset: String?
+    var id: String { title }
+}
+
+private struct ExistingAppView: View {
+    @EnvironmentObject private var backend: Backend
+    let title: String
+    let buttonTitle: String
+    let finished: () -> Void
     @State private var name = ""
     @State private var url = ""
     @State private var summary = ""
+    @State private var iconItem: PhotosPickerItem?
+    @State private var iconData: Data?
+    @State private var iconError: String?
+    @State private var submitted = false
+    @FocusState private var focused: Field?
+    private enum Field { case name, url, summary }
+
+    init(title: String = "Add existing app", buttonTitle: String = "Add app", finished: @escaping () -> Void) {
+        self.title = title
+        self.buttonTitle = buttonTitle
+        self.finished = finished
+    }
+
+    private var validURL: Bool {
+        guard let parts = URLComponents(string: url), parts.scheme == "https", parts.host != nil else { return false }
+        return true
+    }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                PocketHeading(eyebrow: "Make yourself at home", title: "Bring an app\nto Pocket.")
-                    .listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 16, trailing: 0))
-                if let error = backend.error { Text(error).foregroundStyle(.red) }
-                Section {
-                    TextField("App name", text: $name)
-                    TextField("https://your-app.com", text: $url).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    TextField("Short description", text: $summary, axis: .vertical)
-                } footer: { Text("Only you can see this listing until you share it. Your website stays on its existing host.") }
-                Button("Add app") {
-                    Task { if await backend.register(name: name, url: url, summary: summary) { PocketHaptics.success(); dismiss() } }
-                }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
-                    .frame(maxWidth: .infinity).padding(.vertical, 8)
-                    .disabled(name.isEmpty || url.isEmpty)
-                if backend.busy { ProgressView("Adding app…") }
-            }.pocketList().navigationTitle("Add app").navigationBarTitleDisplayMode(.inline).disabled(backend.busy)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(title).font(.pocketDisplay)
+                PhotosPicker(selection: $iconItem, matching: .images) {
+                    HStack(spacing: 14) {
+                        iconPreview
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(name.isEmpty ? "App icon" : name).font(.pocketTitle).lineLimit(1)
+                            Text(iconData == nil ? "Choose picture" : "Change picture")
+                                .font(.pocketCaption).foregroundStyle(PocketStyle.accent)
+                        }
+                        Spacer()
+                        Image(systemName: "photo.on.rectangle").font(.title3).foregroundStyle(PocketStyle.secondaryInk)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PocketPressStyle())
+                .accessibilityLabel(iconData == nil ? "Choose app picture" : "Change app picture")
+                .onChange(of: iconItem) { _, item in loadIcon(item) }
+                VStack(alignment: .leading, spacing: 10) {
+                    field("App name", text: $name, focus: .name)
+                    VStack(alignment: .leading, spacing: 6) {
+                        field("Website URL", text: $url, focus: .url)
+                            .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        if submitted && !validURL {
+                            Text("Enter a complete HTTPS URL.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                        }
+                    }
+                    TextField("", text: $summary, prompt: Text("Description (optional)").foregroundStyle(PocketStyle.secondaryInk), axis: .vertical)
+                        .lineLimit(2...4).focused($focused, equals: .summary).pocketField()
+                }
+
+                Button(action: addApp) {
+                    PrimaryButtonLabel(title: backend.busy ? "Adding app…" : buttonTitle)
+                }
+                .buttonStyle(PocketPressStyle())
+                .disabled(backend.busy || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !validURL)
+
+                if let error = backend.error {
+                    Label(error, systemImage: "exclamationmark.circle")
+                        .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                }
+                if let iconError {
+                    Label(iconError, systemImage: "photo.badge.exclamationmark")
+                        .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                }
+            }
+            .padding(20).frame(maxWidth: 540).frame(maxWidth: .infinity)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
+        .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(backend.busy)
+        .disabled(backend.busy)
+        .onAppear { focused = .name }
+    }
+
+    private func field(_ placeholder: String, text: Binding<String>, focus: Field) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            TextField("", text: text, prompt: Text(placeholder).foregroundStyle(PocketStyle.secondaryInk))
+                .focused($focused, equals: focus).pocketField()
+            if submitted && focus == .name && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Enter an app name.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+            }
+        }
+    }
+
+    @ViewBuilder private var iconPreview: some View {
+        if let iconData, let image = UIImage(data: iconData) {
+            Image(uiImage: image).resizable().scaledToFill()
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(PocketStyle.line))
+        } else {
+            FaviconMark(name: name.isEmpty ? "App" : name, url: validURL ? URL(string: url) : nil, size: 64)
+        }
+    }
+
+    private func loadIcon(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self),
+                      let prepared = CustomAppIconStore.prepare(data) else {
+                    iconError = "Choose a valid image."
+                    return
+                }
+                iconData = prepared
+                iconError = nil
+                PocketHaptics.selection()
+            } catch {
+                iconError = "Could not load that image."
+            }
+        }
+    }
+
+    private func addApp() {
+        submitted = true
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty, validURL, !backend.busy else { return }
+        focused = nil
+        Task {
+            if let app = await backend.register(name: cleanName, url: cleanURL, summary: summary.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                if let iconData { CustomAppIconStore.save(iconData, for: app.id) }
+                PocketHaptics.success(); finished()
+            }
+        }
+    }
+}
+
+private extension View {
+    func pocketField() -> some View {
+        padding(.horizontal, 14).frame(minHeight: 50)
+            .background(PocketStyle.surface, in: RoundedRectangle(cornerRadius: PocketStyle.fieldRadius))
+            .overlay(RoundedRectangle(cornerRadius: PocketStyle.fieldRadius).stroke(PocketStyle.line))
+            .foregroundStyle(PocketStyle.ink)
     }
 }
 
