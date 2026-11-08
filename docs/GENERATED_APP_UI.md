@@ -49,3 +49,14 @@ This contract applies the product's stricter visual direction on top of platform
 - Apple recommends checking whether every word is necessary and using brief, direct, action-oriented labels: https://developer.apple.com/design/human-interface-guidelines/writing
 - Material's list guidance favors short, scannable, structurally consistent rows: https://m3.material.io/components/lists/overview
 - Carbon warns against list content nested more than one level deep and recommends short list titles and concise row content: https://www.carbondesignsystem.com/building-blocks/core/components/contained-list/guidelines
+# iPhone safe areas and live data
+
+- Respect system safe areas and add 24 CSS pixels of breathing room below the top inset. Reserve room for Pocket's close control.
+- Keep the primary action full width, 16 pixels above the bottom safe area. Minimum touch targets are 44 by 44.
+- Remove redundant title subtitles and decorative app marks from the working screen.
+- Render saved records as content-sized rows. Never stretch a row or an empty state into a blank card.
+- Background refreshes must preserve visible content. Never replace saved rows with a skeleton on a polling timer. Allow only one refresh in flight.
+- A tracker emphasizes its actual count; supporting records remain readable beneath it.
+
+Source: [Apple layout guidance](https://developer.apple.com/design/human-interface-guidelines/layout).
+
