@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "weekend-dice",
+  "name": "Weekend Dice",
+  "icon": "dice.fill",
+  "url": "https://example.com",
+  "community": "after-hours",
+  "summary": "Roll for the next game night."
+}

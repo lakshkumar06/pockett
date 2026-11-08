@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pocket mini app manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "icon", "url", "community", "summary"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64},
+    "name": {"type": "string", "minLength": 1, "maxLength": 60},
+    "icon": {"type": "string", "minLength": 1, "maxLength": 80, "description": "SF Symbol name for the native MVP"},
+    "url": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "community": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 160}
+  }
+}

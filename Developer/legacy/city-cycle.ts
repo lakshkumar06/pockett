@@ -1,0 +1,63 @@
+import { defineExperience } from "../src/sdk.ts";
+export default defineExperience({
+  "schemaVersion": 2,
+  "runtimeVersion": 1,
+  "creatorKey": "city-cycle",
+  "metadata": {
+    "name": "City cycle",
+    "icon": "bicycle",
+    "summary": "Record your route with native Pocket controls."
+  },
+  "capabilities": [
+    "route.recording",
+    "liveActivity.route"
+  ],
+  "screens": [
+    {
+      "id": "main",
+      "title": "City cycle",
+      "components": [
+        {
+          "type": "text",
+          "text": "Enjoy a little time outside."
+        },
+        {
+          "type": "routeMap"
+        },
+        {
+          "type": "metric",
+          "label": "Distance (m)",
+          "binding": {
+            "source": "route",
+            "field": "distanceMeters",
+            "type": "number"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Start",
+          "action": {
+            "type": "route.start",
+            "activityType": "cycle"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Show activity",
+          "action": {
+            "type": "liveActivity.start",
+            "layout": "route-summary"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Stop",
+          "action": {
+            "type": "route.stop"
+          }
+        }
+      ]
+    }
+  ]
+}
+);

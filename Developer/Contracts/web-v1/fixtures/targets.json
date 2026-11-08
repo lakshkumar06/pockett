@@ -1,0 +1,21 @@
+{
+  "valid": [
+    "/",
+    "/notes/42?view=full#content",
+    "/app#/notes/42",
+    "/caf%C3%A9"
+  ],
+  "invalid": [
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    "/../secret",
+    "/%2e%2e/secret",
+    "/%2f%2fevil.example",
+    "/%252f",
+    "/bad%",
+    "/a%00",
+    "/a b",
+    "/a%20b"
+  ]
+}

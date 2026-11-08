@@ -1,0 +1,32 @@
+{
+  "name": "@pocket/creator",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pocket": "./src/cli.ts",
+    "pocket-mcp": "./src/mcp.ts"
+  },
+  "exports": {
+    ".": "./src/sdk.ts",
+    "./browser": "./dist/browser/browser.js",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "npm run check && npm run build:browser && node --test ../Tests/Developer/*.test.ts",
+    "pocket": "node src/cli.ts",
+    "mcp": "node src/mcp.ts",
+    "build:browser": "tsc -p tsconfig.browser.json"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0"
+  }
+}

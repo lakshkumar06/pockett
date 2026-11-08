@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "web-v1",
+  "creatorKey": "little-notes",
+  "name": "Little Notes",
+  "summary": "Your own quiet corner for notes and reminders.",
+  "entryURL": "https://notes.example/app",
+  "iconURL": "https://notes.example/icon.svg",
+  "version": "1.0.0",
+  "appearance": {
+    "colorScheme": "system",
+    "themeColor": "#48634A"
+  }
+}

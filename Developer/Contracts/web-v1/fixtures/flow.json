@@ -1,0 +1,154 @@
+{
+  "manifest": {
+    "schemaVersion": "web-v1",
+    "creatorKey": "little-notes",
+    "name": "Little Notes",
+    "summary": "Your own quiet corner for notes and reminders.",
+    "entryURL": "https://notes.example/app",
+    "iconURL": "https://notes.example/icon.svg",
+    "version": "1.0.0",
+    "appearance": {
+      "colorScheme": "system",
+      "themeColor": "#48634A"
+    }
+  },
+  "registration": {
+    "request": {
+      "manifest": {
+        "schemaVersion": "web-v1",
+        "creatorKey": "little-notes",
+        "name": "Little Notes",
+        "summary": "Your own quiet corner for notes and reminders.",
+        "entryURL": "https://notes.example/app",
+        "iconURL": "https://notes.example/icon.svg",
+        "version": "1.0.0",
+        "appearance": {
+          "colorScheme": "system",
+          "themeColor": "#48634A"
+        }
+      }
+    },
+    "response": {
+      "appId": "app_notes",
+      "revision": 1,
+      "deepLink": "pocket://app/app_notes"
+    }
+  },
+  "stored": {
+    "appId": "app_notes",
+    "revision": 1,
+    "manifest": {
+      "schemaVersion": "web-v1",
+      "creatorKey": "little-notes",
+      "name": "Little Notes",
+      "summary": "Your own quiet corner for notes and reminders.",
+      "entryURL": "https://notes.example/app",
+      "iconURL": "https://notes.example/icon.svg",
+      "version": "1.0.0",
+      "appearance": {
+        "colorScheme": "system",
+        "themeColor": "#48634A"
+      }
+    }
+  },
+  "credential": {
+    "request": {},
+    "response": {
+      "appId": "app_notes",
+      "credential": "fixture_app_credential_not_a_real_secret"
+    }
+  },
+  "pairing": {
+    "request": {
+      "consent": true
+    },
+    "response": {
+      "pairingCode": "fixture_pairing_code_128_bits_minimum",
+      "expiresAt": 1793500300
+    }
+  },
+  "redemption": {
+    "request": {
+      "pairingCode": "fixture_pairing_code_128_bits_minimum"
+    },
+    "response": {
+      "subscriptionId": "sub_notes",
+      "appId": "app_notes",
+      "notificationsEnabled": true
+    }
+  },
+  "subscriptions": {
+    "subscriptions": [
+      {
+        "subscriptionId": "sub_notes",
+        "appId": "app_notes",
+        "notificationsEnabled": true
+      }
+    ]
+  },
+  "preferences": {
+    "request": {
+      "notificationsEnabled": false
+    },
+    "response": {
+      "subscriptionId": "sub_notes",
+      "appId": "app_notes",
+      "notificationsEnabled": false
+    }
+  },
+  "event": {
+    "request": {
+      "idempotencyKey": "note-42-ready",
+      "subscriptionId": "sub_notes",
+      "title": "Your note is ready",
+      "body": "Open the note you saved for later.",
+      "target": "/notes/42?view=full#content"
+    },
+    "response": {
+      "eventId": "event_notes",
+      "duplicate": false
+    },
+    "duplicateResponse": {
+      "eventId": "event_notes",
+      "duplicate": true
+    }
+  },
+  "inbox": {
+    "entries": [
+      {
+        "eventId": "event_notes",
+        "appId": "app_notes",
+        "title": "Your note is ready",
+        "body": "Open the note you saved for later.",
+        "target": "/notes/42?view=full#content",
+        "createdAt": 1793500000,
+        "read": false
+      }
+    ],
+    "nextCursor": null,
+    "unreadCount": 1
+  },
+  "launch": {
+    "appId": "app_notes",
+    "target": "/notes/42?view=full#content",
+    "url": "https://notes.example/notes/42?view=full#content",
+    "deepLink": "pocket://app/app_notes?event=event_notes"
+  },
+  "ok": {
+    "ok": true
+  },
+  "error": {
+    "error": "Notification unavailable."
+  },
+  "device": {
+    "request": {
+      "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+      "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "environment": "sandbox"
+    },
+    "response": {
+      "ok": true,
+      "deliveryMode": "local"
+    }
+  }
+}

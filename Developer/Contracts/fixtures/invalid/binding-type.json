@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "runtimeVersion": 1,
+  "creatorKey": "morning-walk",
+  "metadata": {
+    "name": "Morning walk",
+    "icon": "figure.walk",
+    "summary": "Record your route with native Pocket controls."
+  },
+  "capabilities": [
+    "route.recording",
+    "liveActivity.route"
+  ],
+  "screens": [
+    {
+      "id": "main",
+      "title": "Morning walk",
+      "components": [
+        {
+          "type": "text",
+          "text": "Enjoy a little time outside."
+        },
+        {
+          "type": "routeMap"
+        },
+        {
+          "type": "metric",
+          "label": "Distance (m)",
+          "binding": {
+            "source": "route",
+            "field": "distanceMeters",
+            "type": "string"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Start",
+          "action": {
+            "type": "route.start",
+            "activityType": "walk"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Show activity",
+          "action": {
+            "type": "liveActivity.start",
+            "layout": "route-summary"
+          }
+        },
+        {
+          "type": "button",
+          "label": "Stop",
+          "action": {
+            "type": "route.stop"
+          }
+        }
+      ]
+    }
+  ]
+}

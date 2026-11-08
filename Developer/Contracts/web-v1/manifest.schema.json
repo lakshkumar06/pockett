@@ -1,0 +1,70 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "web-v1"
+    },
+    "creatorKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "entryURL": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "iconURL": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colorScheme": {
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ]
+        },
+        "themeColor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 7,
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        }
+      },
+      "required": []
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "creatorKey",
+    "name",
+    "summary",
+    "entryURL",
+    "iconURL",
+    "version"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

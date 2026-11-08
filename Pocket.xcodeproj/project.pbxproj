@@ -1,0 +1,508 @@
+// !$*UTF8*$!
+{
+	"classes" = {
+	};
+	"objectVersion" = "56";
+	"archiveVersion" = "1";
+	"objects" = {
+        "000000000000000000000720" = { "isa" = "PBXFileReference"; "path" = "Icons.xcassets"; "lastKnownFileType" = "folder.assetcatalog"; "sourceTree" = "<group>"; };
+        "000000000000000000000721" = { "isa" = "PBXBuildFile"; "fileRef" = "000000000000000000000720"; };
+        "000000000000000000000710" = { "isa" = "PBXFileReference"; "path" = "Fonts"; "lastKnownFileType" = "folder"; "sourceTree" = "<group>"; };
+        "000000000000000000000711" = { "isa" = "PBXBuildFile"; "fileRef" = "000000000000000000000710"; };
+		"00000000000000000000000F" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"DEVELOPMENT_TEAM" = "P2VA7LLDN2";
+				"MARKETING_VERSION" = "0.1.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"INFOPLIST_FILE" = "Pocket/Info.plist";
+				"POCKET_PUSH_ENABLED" = "NO";
+				"POCKET_APNS_ENVIRONMENT" = "development";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SWIFT_VERSION" = "5.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "dev.local.pocket";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"CODE_SIGN_ENTITLEMENTS" = "Pocket/Pocket.entitlements";
+			};
+			"name" = "Release";
+		};
+		"000000000000000000000003" = {
+			"path" = "Pocket";
+			"isa" = "PBXGroup";
+			"children" = (
+                "000000000000000000000720",
+                "000000000000000000000710",
+				"000000000000000000000604",
+				"000000000000000000000602",
+				"000000000000000000000600",
+				"000000000000000000000064",
+				"000000000000000000000065",
+				"000000000000000000000066",
+				"000000000000000000000067",
+				"000000000000000000000068",
+				"000000000000000000000069",
+				"000000000000000000000302",
+			);
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000067" = {
+			"path" = "Views.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000D" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"SWIFT_VERSION" = "5.0";
+				"CLANG_ENABLE_MODULES" = "YES";
+				"SDKROOT" = "iphoneos";
+			};
+			"name" = "Release";
+		};
+		"000000000000000000000008" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"0000000000000000000000C9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000065";
+		};
+		"000000000000000000000001" = {
+			"buildConfigurationList" = "00000000000000000000000A";
+			"targets" = (
+				"000000000000000000000005",
+				"000000000000000000000340",
+			);
+			"developmentRegion" = "en";
+			"knownRegions" = (
+				"en",
+				"Base",
+			);
+			"isa" = "PBXProject";
+			"compatibilityVersion" = "Xcode 14.0";
+			"productRefGroup" = "000000000000000000000004";
+			"projectDirPath" = "";
+			"attributes" = {
+				"LastUpgradeCheck" = "1600";
+				"TargetAttributes" = {
+					"000000000000000000000005" = {
+						"SystemCapabilities" = {
+							"com.apple.ApplicationGroups.iOS" = {
+								"enabled" = 1;
+							};
+						};
+					};
+					"000000000000000000000340" = {
+						"SystemCapabilities" = {
+							"com.apple.ApplicationGroups.iOS" = {
+								"enabled" = 1;
+							};
+						};
+					};
+				};
+			};
+			"hasScannedForEncodings" = "0";
+			"projectRoot" = "";
+			"mainGroup" = "000000000000000000000002";
+		};
+		"000000000000000000000065" = {
+			"path" = "PocketApp.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000B" = {
+			"isa" = "XCConfigurationList";
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+			"buildConfigurations" = (
+				"00000000000000000000000E",
+				"00000000000000000000000F",
+			);
+		};
+		"000000000000000000000006" = {
+			"path" = "Pocket.app";
+			"isa" = "PBXFileReference";
+			"includeInIndex" = "0";
+			"explicitFileType" = "wrapper.application";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"0000000000000000000000CC" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000068";
+		};
+		"000000000000000000000004" = {
+			"isa" = "PBXGroup";
+			"name" = "Products";
+			"children" = (
+				"000000000000000000000006",
+				"000000000000000000000304",
+			);
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000068" = {
+			"path" = "WebViewer.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"0000000000000000000000CA" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000066";
+		};
+		"000000000000000000000009" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+                "000000000000000000000721",
+                "000000000000000000000711",
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"00000000000000000000000E" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"DEVELOPMENT_TEAM" = "P2VA7LLDN2";
+				"MARKETING_VERSION" = "0.1.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"INFOPLIST_FILE" = "Pocket/Info.plist";
+				"POCKET_PUSH_ENABLED" = "NO";
+				"POCKET_APNS_ENVIRONMENT" = "development";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SWIFT_VERSION" = "5.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "dev.local.pocket";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"CODE_SIGN_ENTITLEMENTS" = "Pocket/Pocket.entitlements";
+			};
+			"name" = "Debug";
+		};
+		"000000000000000000000002" = {
+			"isa" = "PBXGroup";
+			"sourceTree" = "<group>";
+			"children" = (
+				"000000000000000000000003",
+				"000000000000000000000004",
+				"000000000000000000000305",
+				"000000000000000000000306",
+			);
+		};
+		"000000000000000000000066" = {
+			"path" = "Store.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000C" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"SWIFT_VERSION" = "5.0";
+				"CLANG_ENABLE_MODULES" = "YES";
+				"SDKROOT" = "iphoneos";
+			};
+			"name" = "Debug";
+		};
+		"000000000000000000000007" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = (
+				"000000000000000000000605",
+				"000000000000000000000603",
+				"000000000000000000000601",
+				"0000000000000000000000C8",
+				"0000000000000000000000C9",
+				"0000000000000000000000CA",
+				"0000000000000000000000CB",
+				"0000000000000000000000CC",
+				"0000000000000000000000CD",
+				"000000000000000000000310",
+				"000000000000000000000311",
+			);
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"0000000000000000000000CD" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000069";
+		};
+		"0000000000000000000000C8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000064";
+		};
+		"000000000000000000000064" = {
+			"path" = "Models.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000A" = {
+			"isa" = "XCConfigurationList";
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+			"buildConfigurations" = (
+				"00000000000000000000000C",
+				"00000000000000000000000D",
+			);
+		};
+		"000000000000000000000005" = {
+			"buildConfigurationList" = "00000000000000000000000B";
+			"productReference" = "000000000000000000000006";
+			"productType" = "com.apple.product-type.application";
+			"productName" = "Pocket";
+			"isa" = "PBXNativeTarget";
+			"buildPhases" = (
+				"000000000000000000000007",
+				"000000000000000000000008",
+				"000000000000000000000009",
+				"000000000000000000000323",
+			);
+			"dependencies" = (
+				"000000000000000000000342",
+			);
+			"name" = "Pocket";
+			"buildRules" = (
+			);
+		};
+		"000000000000000000000069" = {
+			"path" = "Backend.swift";
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"0000000000000000000000CB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000067";
+		};
+		"000000000000000000000301" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "WidgetSnapshot.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000302" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "WidgetPublisher.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000303" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "PocketWidgets.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000304" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.app-extension";
+			"includeInIndex" = 0;
+			"path" = "PocketWidgets.appex";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000305" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000301",
+			);
+			"path" = "Shared";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000306" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000303",
+			);
+			"path" = "PocketWidgets";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000310" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000301";
+		};
+		"000000000000000000000311" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000302";
+		};
+		"000000000000000000000312" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000301";
+		};
+		"000000000000000000000313" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000303";
+		};
+		"000000000000000000000320" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+				"000000000000000000000312",
+				"000000000000000000000313",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000321" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000322" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000314" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000304";
+			"settings" = {
+				"ATTRIBUTES" = (
+					"RemoveHeadersOnCopy",
+				);
+			};
+		};
+		"000000000000000000000323" = {
+			"isa" = "PBXCopyFilesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"dstPath" = "";
+			"dstSubfolderSpec" = 13;
+			"files" = (
+				"000000000000000000000314",
+			);
+			"name" = "Embed App Extensions";
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000330" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"APPLICATION_EXTENSION_API_ONLY" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_ENTITLEMENTS" = "PocketWidgets/PocketWidgets.entitlements";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"DEVELOPMENT_TEAM" = "P2VA7LLDN2";
+				"INFOPLIST_FILE" = "PocketWidgets/Info.plist";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "dev.local.pocket.widgets";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SKIP_INSTALL" = "YES";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SWIFT_VERSION" = "5.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+			};
+		};
+		"000000000000000000000331" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"APPLICATION_EXTENSION_API_ONLY" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_ENTITLEMENTS" = "PocketWidgets/PocketWidgets.entitlements";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"DEVELOPMENT_TEAM" = "P2VA7LLDN2";
+				"INFOPLIST_FILE" = "PocketWidgets/Info.plist";
+				"MARKETING_VERSION" = "0.1.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "dev.local.pocket.widgets";
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"SKIP_INSTALL" = "YES";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SWIFT_VERSION" = "5.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+			};
+		};
+		"000000000000000000000332" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000330",
+				"000000000000000000000331",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"000000000000000000000340" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "000000000000000000000332";
+			"buildPhases" = (
+				"000000000000000000000320",
+				"000000000000000000000321",
+				"000000000000000000000322",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+			);
+			"name" = "PocketWidgets";
+			"productName" = "PocketWidgets";
+			"productReference" = "000000000000000000000304";
+			"productType" = "com.apple.product-type.app-extension";
+		};
+		"000000000000000000000341" = {
+			"isa" = "PBXContainerItemProxy";
+			"containerPortal" = "000000000000000000000001";
+			"proxyType" = 1;
+			"remoteGlobalIDString" = "000000000000000000000340";
+			"remoteInfo" = "PocketWidgets";
+		};
+		"000000000000000000000342" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "000000000000000000000340";
+			"targetProxy" = "000000000000000000000341";
+		};
+		"000000000000000000000600" = {
+			"isa" = "PBXFileReference";
+			"path" = "WebPolicy.swift";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000601" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000600";
+		};
+		"000000000000000000000602" = {
+			"isa" = "PBXFileReference";
+			"path" = "NotificationModels.swift";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000603" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000602";
+		};
+		"000000000000000000000604" = {
+			"isa" = "PBXFileReference";
+			"path" = "Notifications.swift";
+			"lastKnownFileType" = "sourcecode.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000605" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000604";
+		};
+	};
+	"rootObject" = "000000000000000000000001";
+}
