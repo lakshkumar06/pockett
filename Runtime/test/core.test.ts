@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dispatch,mini,Fault,validateSpec,type Store} from '../../Spacetime/spacetimedb/src/domain.ts';
 import {envelope,hash} from '../src/spacetime.ts';
-import {build,checks,complete} from '../src/agent.ts';
+import {build,checks,complete,SYSTEM_PROMPT} from '../src/agent.ts';
+import {render} from '../src/template.ts';
 import {Photon} from '../src/photon.ts';
 function database(){let records=new Map<string,any>();const store:Store={get:(t,k)=>structuredClone(records.get(t+':'+k)),put:(t,k,v)=>{records.set(t+':'+k,structuredClone(v));},delete:(t,k)=>{records.delete(t+':'+k);},all:t=>[...records].filter(([k])=>k.startsWith(t+':')).map(([,v])=>structuredClone(v))};
  const api=(method:string,path:string,body:any={},token='alice',extra:any={})=>{const snapshot=new Map(records);try{const req=envelope(method,path,body,token,extra);return path.startsWith('/mini/')?mini(store,req,100):dispatch(store,req,100);}catch(e){records=snapshot;throw e;}};
@@ -51,6 +52,20 @@ test('appearance and choice fields stay within the fixed safe design system',()=
  assert.equal(checks(poll).ok,true);assert.doesNotThrow(()=>validateSpec(poll));
  assert.throws(()=>validateSpec({...poll,appearance:{...poll.appearance,theme:'neon'}}),/Invalid appearance/);
  assert.throws(()=>validateSpec({...poll,fields:[{...poll.fields[0],options:['Tacos','Tacos']}]}),/Duplicate choice/);
+});
+test('generated apps use the phone-sized app shell instead of a website layout',()=>{
+ const html=render(spec,'phone-shell');
+ assert.match(SYSTEM_PROMPT,/Make an app, never a website/);
+ assert.match(SYSTEM_PROMPT,/one phone viewport/);
+ assert.match(SYSTEM_PROMPT,/No gradients/);
+ assert.match(SYSTEM_PROMPT,/Do not put cards inside cards/);
+ assert.match(SYSTEM_PROMPT,/Minimize text/);
+ assert.match(html,/height:100dvh/);
+ assert.match(html,/#items\{[^}]*overflow-y:auto/);
+ assert.match(html,/body:before\{display:none!important\}/);
+ assert.match(html,/\.records\{padding:0 2px;border:0/);
+ assert.match(html,/className='composer-trigger'/);
+ assert.match(html,/classList\.add\('sheet-open'\)/);
 });
 test('Photon consumes its documented 2.0 message shape and deduplicates replies',async()=>{
  const {api}=database();api('POST','/photon-link',{},'alice',{secretHash:hash('link-secret')});let sends=0;

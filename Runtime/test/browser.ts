@@ -8,9 +8,11 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 try{
  for(const viewport of [{width:390,height:844},{width:1280,height:900}]){
   const page=await browser.newPage({viewport});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(url);await page.locator('#entry:not([hidden])').waitFor();
+  await page.goto(url);await page.locator('#openComposer:not([hidden])').waitFor();
   assert.equal(new URL(page.url()).hash,'');
-  const item='Browser check '+viewport.width;await page.getByLabel('Item',{exact:true}).fill(item);await page.getByRole('button',{name:'Add entry',exact:true}).click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),true);
+  await page.locator('#openComposer').click();await page.locator('#entry.sheet-open').waitFor();
+  const item='Browser check '+viewport.width;await page.getByLabel('Item',{exact:true}).fill(item);await page.locator('#save').click();
   await page.locator('article').filter({hasText:item}).waitFor();await page.reload();await page.locator('article').filter({hasText:item}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`${out}/miniapp-${viewport.width}.png`,fullPage:true,animations:'disabled'});
