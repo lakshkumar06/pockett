@@ -23,6 +23,7 @@ swiftc -module-cache-path .build/runtime-v2-module-cache Pocket/RetiredNative/Ro
 python3 Tests/test_backend.py
 python3 Tests/test_web_backend.py
 node Tests/check_viewport.cjs
+node Tests/check_native_bridge.cjs
 swiftc -module-cache-path .build/runtime-v2-module-cache Pocket/Models.swift Pocket/WebPolicy.swift Pocket/NotificationModels.swift Tests/WebChecks.swift -o .build/web-tests
 .build/web-tests
 plutil -lint Pocket/Info.plist Pocket.xcodeproj/project.pbxproj PocketWidgets/Info.plist Pocket/Pocket.entitlements Pocket/PocketPush.entitlements PocketWidgets/PocketWidgets.entitlements

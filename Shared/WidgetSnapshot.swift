@@ -5,6 +5,7 @@ struct WidgetMiniApp: Codable, Identifiable, Equatable {
     let name: String
     let shared: Bool
     var icon: Data?
+    var origin: String? = nil
     var deepLink: URL { URL(string: "pocket://app/\(id)")! }
 }
 
@@ -37,4 +38,33 @@ enum WidgetStorage {
     }
     static func page(size: Int) -> Int { defaults?.integer(forKey: "widget.page.\(size)") ?? 0 }
     static func setPage(_ page: Int, size: Int) { defaults?.set(page, forKey: "widget.page.\(size)") }
+}
+
+/// Fixed native layout: text only, scoped to the current account and registered origin.
+struct WidgetCard: Codable, Equatable {
+    let account: String
+    let appID: String
+    let origin: String
+    let title: String
+    let body: String
+    let updated: Date
+    static func valid(title: String, body: String) -> Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && title.count <= 60 && body.count <= 180
+    }
+    func matches(_ snapshot: WidgetSnapshot) -> Bool {
+        account == snapshot.account && snapshot.apps.contains { $0.id == appID && $0.origin == origin }
+    }
+}
+
+extension WidgetStorage {
+    static let cardKind = "PocketAppCard"
+    static func cards() -> [WidgetCard] {
+        guard let data = defaults?.data(forKey: "widget.cards"),
+              let cards = try? JSONDecoder().decode([WidgetCard].self, from: data) else { return [] }
+        return cards.filter { $0.matches(read()) }
+    }
+    static func writeCards(_ cards: [WidgetCard]) {
+        guard let data = try? JSONEncoder().encode(cards) else { return }
+        defaults?.set(data, forKey: "widget.cards")
+    }
 }

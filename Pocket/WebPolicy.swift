@@ -27,6 +27,12 @@ enum WebPolicy {
         guard let origin = origin(entry) else { return false }
         return self.origin(url) == origin
     }
+    /// Native access is stricter than browsing: HTTPS, exact origin, main frame only.
+    static func nativeAccess(entry: URL, page: URL, scheme: String, host: String, port: Int, mainFrame: Bool) -> Bool {
+        guard mainFrame, scheme == "https", entry.scheme == "https", safe(page, for: entry),
+              let components = URLComponents(url: entry, resolvingAgainstBaseURL: false) else { return false }
+        return components.host?.lowercased() == host.lowercased() && (components.port ?? 443) == (port == 0 ? 443 : port)
+    }
     static func restorable(_ url: URL, for entry: URL) -> Bool {
         guard safe(url, for: entry), let c = URLComponents(url: url, resolvingAgainstBaseURL: false), c.fragment == nil else { return false }
         let sensitive = ["token", "access_token", "id_token", "code", "password", "secret", "session"]

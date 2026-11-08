@@ -4,6 +4,7 @@ import WebKit
 @MainActor final class WebSession: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
     let webView: WKWebView
     let app: MiniApp
+    let nativeBridge: NativeBridge
     @Published var loading = true
     @Published var error: String?
     @Published var canGoBack = false
@@ -13,13 +14,17 @@ import WebKit
     private var observation: NSKeyValueObservation?
     init(app: MiniApp, url: URL) {
         self.app = app
+        nativeBridge = NativeBridge(app: app)
         let configuration = WKWebViewConfiguration()
         // Each app gets a separate ephemeral cookie/storage jar. Never use .default().
         configuration.websiteDataStore = .nonPersistent()
+        configuration.userContentController.addScriptMessageHandler(nativeBridge, contentWorld: .page, name: "pocketNative")
+        configuration.userContentController.addUserScript(WKUserScript(source: NativeBridge.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         configuration.allowsInlineMediaPlayback = true
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
+        nativeBridge.webView = webView
         webView.navigationDelegate = self; webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -33,8 +38,8 @@ import WebKit
         guard WebPolicy.safe(url, for: app.url) else { error = "This link is outside the app's website."; return }
         currentURL = url; webView.load(URLRequest(url: url))
     }
-    func discard() { webView.stopLoading(); webView.navigationDelegate = nil; webView.uiDelegate = nil; webView.loadHTMLString("", baseURL: nil); onVisit = nil; observation = nil }
-    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { loading = true; error = nil }
+    func discard() { nativeBridge.visible = false; nativeBridge.reset(); webView.configuration.userContentController.removeScriptMessageHandler(forName: "pocketNative", contentWorld: .page); webView.stopLoading(); webView.navigationDelegate = nil; webView.uiDelegate = nil; webView.loadHTMLString("", baseURL: nil); onVisit = nil; observation = nil }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { nativeBridge.reset(); loading = true; error = nil }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         loading = false; canGoBack = webView.canGoBack
         if let url = webView.url, WebPolicy.safe(url, for: app.url) { currentURL = url; onVisit?(url) }
@@ -45,7 +50,7 @@ import WebKit
         guard (error as NSError).code != NSURLErrorCancelled else { return }
         loading = false; self.error = error.localizedDescription
     }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loading = false; error = "This page stopped responding. Reload to continue." }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { nativeBridge.reset(); loading = false; error = "This page stopped responding. Reload to continue." }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
         if url.scheme?.lowercased() == "solana" {
@@ -86,13 +91,13 @@ import WebKit
         if let existing = sessions[app.id], existing.app.url != app.url { remove(app.id) }
         let session = sessions[app.id] ?? WebSession(app: app, url: initial)
         sessions[app.id] = session; order.removeAll { $0 == app.id }; order.append(app.id)
-        while order.count > 3 { remove(order[0]) }
+        while order.count > 3 { remove(order[0], stopRecording: false) }
         if let exactTarget { session.load(exactTarget) }
         return session
     }
-    func remove(_ id: String) { sessions.removeValue(forKey: id)?.discard(); order.removeAll { $0 == id } }
-    func retain(_ ids: Set<String>) { for id in Array(sessions.keys) where !ids.contains(id) { remove(id) } }
-    func clear() { for session in sessions.values { session.discard() }; sessions = [:]; order = []; identity = nil }
+    func remove(_ id: String, stopRecording: Bool = true) { if stopRecording { NativeLocation.shared.remove(id: id) }; sessions.removeValue(forKey: id)?.discard(); order.removeAll { $0 == id } }
+    func retain(_ ids: Set<String>) { NativeLocation.shared.retain(ids); for id in Array(sessions.keys) where !ids.contains(id) { remove(id) } }
+    func clear() { NativeLocation.shared.clear(); for session in sessions.values { session.discard() }; sessions = [:]; order = []; identity = nil }
 }
 
 struct WebSurface: UIViewRepresentable {
@@ -103,6 +108,7 @@ struct WebSurface: UIViewRepresentable {
 
 struct WebViewer: View {
     @ObservedObject var session: WebSession
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     var body: some View {
@@ -119,6 +125,12 @@ struct WebViewer: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(PocketStyle.canvas)
             }
+        }
+        .safeAreaInset(edge: .bottom) { NativeRecordingControl() }
+        .onAppear { session.nativeBridge.visible = true }
+        .onDisappear { session.nativeBridge.visible = false; session.nativeBridge.reset() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { session.nativeBridge.reset() }
         }
         .overlay(alignment: .topTrailing) {
             Button { PocketHaptics.tap(); dismiss() } label: {

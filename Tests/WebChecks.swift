@@ -7,6 +7,11 @@ import Foundation
             precondition(!WebPolicy.solanaPayment(URL(string: value)!))
         }
         let entry = URL(string: "https://notes.example/app")!
+        precondition(WebPolicy.nativeAccess(entry: entry, page: entry, scheme: "https", host: "notes.example", port: 0, mainFrame: true))
+        for (scheme, host, port, mainFrame) in [("http", "notes.example", 80, true), ("https", "evil.example", 443, true), ("https", "notes.example", 444, true), ("https", "notes.example", 443, false)] {
+            precondition(!WebPolicy.nativeAccess(entry: entry, page: entry, scheme: scheme, host: host, port: port, mainFrame: mainFrame))
+        }
+        precondition(!WebPolicy.nativeAccess(entry: entry, page: URL(string: "https://evil.example")!, scheme: "https", host: "notes.example", port: 443, mainFrame: true))
         for value in ["https://notes.example/next", "https://notes.example:443/a?view=full#note"] { precondition(WebPolicy.safe(URL(string:value)!,for:entry)) }
         for value in ["https://evil.example/app", "http://notes.example/app", "https://notes.example:444/", "https://user:pass@notes.example/", "javascript:alert(1)"] { precondition(!WebPolicy.safe(URL(string:value)!,for:entry)) }
         precondition(!WebPolicy.restorable(URL(string:"https://notes.example/callback?code=private")!,for:entry))

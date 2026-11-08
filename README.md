@@ -2,9 +2,40 @@
 
 ## Overview
 
-Pockett turns a prompt into a small app you can open and share in Pocket on iPhone. Build through a messaging agent, an editor agent, or the terminal.
+Pockett turns a prompt into a small app you can open and share in Pocket on iPhone. Build through a messaging agent, an editor agent, or the terminal—and give your hosted web apps native iPhone capabilities through Pocket’s JavaScript bridge.
 
 It currently supports lists, number trackers, and polls with up to eight fields. Apps use a shared page template; their data lives in SpacetimeDB.
+
+## Web apps with iPhone superpowers
+
+**Record a walk with the screen locked. Put an app’s update on your Home Screen. Feel a native haptic when something happens.** Pocket gives hosted web apps a direct bridge to compiled iOS features through `window.pocketNative`.
+
+| Capability | What your app can do |
+| --- | --- |
+| Background GPS | Start a native route recording that continues while the screen is locked or Pocket is in the background. Read the route when you return. |
+| Home Screen widgets | Publish a native text card. Users add the Pocket app card widget, choose your app, and tap it to open your app. |
+| Motion and orientation | Read device attitude, gravity, and acceleration through Core Motion. |
+| Steps and walking distance | Read today’s step count and available walking distance from the native pedometer. |
+| Haptics | Trigger native impact feedback from your web app. |
+
+Creators keep their web frontend and hosting. Pocket handles the native APIs, system permissions, and app-specific consent. Each call is restricted to the registered HTTPS origin and main frame. Route data belongs to the calling app; widget content is scoped to its app, origin, and signed-in account.
+
+```js
+// Call from separate buttons in your hosted app; handle rejected promises.
+await pocketNative.location.start();
+// Lock the screen, take a walk, then return:
+const route = await pocketNative.location.read();
+await pocketNative.location.stop();
+
+await pocketNative.widgets.update({
+  title: 'Walk complete',
+  body: 'Your route is ready to explore.'
+});
+```
+
+Recording has a native Stop control and an eight-hour limit. The latest 1,000 points stay in memory; recording does not survive Pocket being terminated. Widgets use a fixed text layout, require user installation, and refresh on iOS’s schedule. Simulator builds and targeted checks pass; background GPS, physical sensors, and widget delivery still need device validation.
+
+Explore the [bridge API](docs/NATIVE-BRIDGE.md) or host the [native sensors demo](Developer/examples/native-sensors/index.html) on HTTPS and open it in Pocket. Generated list, tracker, and poll apps do not automatically use these APIs; creators add the calls to their hosted app.
 
 ## Architecture
 

@@ -35,6 +35,7 @@ struct SessionView: View {
                 NavigationStack { AccountView() }
             }
         }
+        .safeAreaInset(edge: .bottom) { NativeRecordingControl() }
         .onOpenURL { backend.pendingURL = $0 }
         .onChange(of: notifications.pendingURL) { _, url in if let url { backend.pendingURL = url; notifications.pendingURL = nil } }
         .onChange(of: notifications.token) { _, token in

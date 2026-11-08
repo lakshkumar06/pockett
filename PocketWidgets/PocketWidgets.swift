@@ -115,11 +115,84 @@ struct PocketWidgetView: View {
     }
 }
 
-@main struct PocketAppsWidget: Widget {
+struct PocketAppsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: WidgetStorage.kind, provider: PocketProvider()) { PocketWidgetView(entry: $0) }
             .configurationDisplayName("Pocket apps")
             .description("Your mini apps and apps shared with you. Tap one to open it in Pocket.")
             .supportedFamilies([.systemMedium, .systemLarge])
+    }
+}
+
+struct CardApp: AppEntity {
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Pocket app"
+    static var defaultQuery = CardAppQuery()
+    var id: String
+    var name: String
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(name)") }
+}
+struct CardAppQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [CardApp] {
+        try await suggestedEntities().filter { identifiers.contains($0.id) }
+    }
+    func suggestedEntities() async throws -> [CardApp] {
+        let snapshot = WidgetStorage.read()
+        return snapshot.apps.map { CardApp(id: $0.id, name: $0.name) }
+    }
+}
+struct CardConfiguration: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Choose a Pocket app"
+    @Parameter(title: "App") var app: CardApp?
+}
+struct CardEntry: TimelineEntry {
+    let date: Date
+    var app: WidgetMiniApp?
+    var card: WidgetCard?
+}
+struct CardProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> CardEntry { CardEntry(date: .now) }
+    func snapshot(for configuration: CardConfiguration, in context: Context) async -> CardEntry { entry(configuration) }
+    func timeline(for configuration: CardConfiguration, in context: Context) async -> Timeline<CardEntry> {
+        Timeline(entries: [entry(configuration)], policy: .never)
+    }
+    private func entry(_ configuration: CardConfiguration) -> CardEntry {
+        let app = WidgetStorage.read().apps.first { $0.id == configuration.app?.id }
+        return CardEntry(date: .now, app: app, card: WidgetStorage.cards().first { $0.appID == app?.id })
+    }
+}
+struct PocketCardView: View {
+    let entry: CardEntry
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(entry.app?.name ?? "Pocket").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            if let card = entry.card {
+                Text(card.title).font(.headline).lineLimit(2)
+                Text(card.body).font(.subheadline).lineLimit(4)
+                Spacer(minLength: 0)
+                Text(card.updated, style: .time).font(.caption2).foregroundStyle(.secondary)
+            } else {
+                Text(entry.app == nil ? "Choose an app" : "Open the app to publish an update").font(.headline)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .privacySensitive()
+        .containerBackground(.background, for: .widget)
+        .widgetURL(entry.app?.deepLink ?? WidgetStorage.libraryURL)
+    }
+}
+struct PocketAppCardWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: WidgetStorage.cardKind, intent: CardConfiguration.self, provider: CardProvider()) {
+            PocketCardView(entry: $0)
+        }
+        .configurationDisplayName("Pocket app card")
+        .description("An update from an app you choose. Open the app to refresh its content.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+@main struct PocketWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        PocketAppsWidget()
+        PocketAppCardWidget()
     }
 }

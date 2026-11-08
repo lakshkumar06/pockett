@@ -19,6 +19,21 @@ import Foundation
         for row in rows { precondition(DeepLink(url: row.deepLink) == .app(row.id)) }
         precondition(DeepLink(url: WidgetStorage.libraryURL) == .library)
         precondition(DeepLink(url: URL(string: "pocket://library/unexpected")!) == nil)
+        precondition(WidgetCard.valid(title: "Today", body: "3 tasks"))
+        precondition(!WidgetCard.valid(title: "  ", body: ""))
+        precondition(!WidgetCard.valid(title: String(repeating: "x", count: 61), body: ""))
+        precondition(!WidgetCard.valid(title: "Title", body: String(repeating: "x", count: 181)))
+        let card = WidgetCard(account: "account-a", appID: "notes", origin: "https://notes.example:443", title: "Today", body: "3 tasks", updated: Date())
+        let authorized = WidgetSnapshot(account: "account-a", apps: [WidgetMiniApp(id: "notes", name: "Notes", shared: false, origin: "https://notes.example:443")])
+        precondition(card.matches(authorized))
+        var changed = authorized; changed.account = "account-b"
+        precondition(!card.matches(changed))
+        changed = authorized; changed.apps[0].origin = "https://other.example:443"
+        precondition(!card.matches(changed))
+        changed = authorized; changed.apps = []
+        precondition(!card.matches(changed))
+        let decodedCard = try JSONDecoder().decode(WidgetCard.self, from: JSONEncoder().encode(card))
+        precondition(decodedCard == card)
         print("Widget pagination, snapshot and launch-link checks passed")
     }
 }

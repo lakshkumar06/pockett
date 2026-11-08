@@ -38,6 +38,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Record a route for the Pocket app you approve, including while the screen is locked, until you stop recording.</string>
+	<key>UIBackgroundModes</key>
+	<array><string>location</string></array>
+	<key>NSMotionUsageDescription</key>
+	<string>Share motion and today’s step count with a Pocket app only after you allow that app access.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect to your Pocket test server on this network.</string>
 	<key>UIApplicationSceneManifest</key>

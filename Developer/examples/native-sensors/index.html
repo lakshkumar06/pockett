@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pocket native sensors</title>
+<style>body{font:18px system-ui;max-width:36rem;margin:4rem auto;padding:1rem}button{font:inherit;padding:1rem;margin:.3rem}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<h1>Native sensors</h1>
+<p>Open this HTTPS app inside Pocket. Each capability asks for your permission.</p>
+<button data-method="haptics">Tap feedback</button>
+<button data-method="motion">Read motion</button>
+<button data-method="pedometer">Today’s steps</button>
+<button data-method="locationStart">Start route recording</button>
+<button data-method="locationRead">Read recorded route</button>
+<button data-method="locationStop">Stop recording</button>
+<button data-method="widget">Publish widget</button>
+<button data-method="widgetClear">Clear widget</button>
+<pre id="output" role="status"></pre>
+<script>
+const output = document.querySelector('#output');
+const api = window.pocketNative;
+output.textContent = api ? 'Ready. Choose a capability.' : 'Native access requires the Pocket iOS app.';
+for (const button of document.querySelectorAll('button')) {
+  button.disabled = !api;
+  button.onclick = async () => {
+    try {
+      const methods = {haptics: () => api.haptics.tap(), motion: () => api.motion.sample(), pedometer: () => api.pedometer.today(), locationStart: () => api.location.start(), locationRead: () => api.location.read(), locationStop: () => api.location.stop(), widget: () => api.widgets.update({title: 'Native sensors', body: 'Published from my Pocket app'}), widgetClear: () => api.widgets.clear()};
+      output.textContent = JSON.stringify(await methods[button.dataset.method](), null, 2);
+    } catch (error) { output.textContent = error.message || String(error); }
+  };
+}
+</script>
+</html>

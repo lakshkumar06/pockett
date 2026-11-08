@@ -9,10 +9,28 @@ import WidgetKit
     static func clear() {
         generation = UUID()
         iconTask?.cancel()
+        WidgetStorage.writeCards([])
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.cardKind)
         WidgetStorage.write(.empty)
         WidgetStorage.setPage(0, size: 4)
         WidgetStorage.setPage(0, size: 8)
         WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.kind)
+    }
+
+    static func updateCard(app: MiniApp, title: String, body: String) -> Bool {
+        let snapshot = WidgetStorage.read()
+        guard let account = snapshot.account, let origin = WebPolicy.origin(app.url),
+              snapshot.apps.contains(where: { $0.id == app.id && $0.origin == origin }),
+              WidgetCard.valid(title: title, body: body) else { return false }
+        var cards = WidgetStorage.cards().filter { $0.appID != app.id }
+        cards.append(WidgetCard(account: account, appID: app.id, origin: origin, title: title, body: body, updated: Date()))
+        WidgetStorage.writeCards(cards)
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.cardKind)
+        return true
+    }
+    static func clearCard(app: MiniApp) {
+        WidgetStorage.writeCards(WidgetStorage.cards().filter { $0.appID != app.id })
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.cardKind)
     }
 
     static func publish(_ apps: [RegisteredApp], account: String, server: String) {
@@ -23,11 +41,13 @@ import WidgetKit
         let previous = WidgetStorage.read()
         let cached = previous.account == identity ? Dictionary(uniqueKeysWithValues: previous.apps.map { ($0.id, $0.icon) }) : [:]
         let rows = apps.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }.map {
-            WidgetMiniApp(id: $0.id, name: $0.name, shared: $0.owner != account, icon: cached[$0.id] ?? nil)
+            WidgetMiniApp(id: $0.id, name: $0.name, shared: $0.owner != account, icon: cached[$0.id] ?? nil, origin: $0.url.flatMap { WebPolicy.origin($0) })
         }
         var snapshot = WidgetSnapshot(account: identity, apps: rows)
         if snapshot != previous {
             WidgetStorage.write(snapshot)
+            WidgetStorage.writeCards(WidgetStorage.cards())
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.cardKind)
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetStorage.kind)
         }
         iconTask = Task {
