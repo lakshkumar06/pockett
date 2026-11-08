@@ -2,6 +2,19 @@ import Foundation
 
 /// Shared by restoration and navigation. Never pass arbitrary incoming URLs to WebKit.
 enum WebPolicy {
+    /// Only transfer requests, never remotely supplied transaction-request URLs.
+    static func solanaPayment(_ url: URL) -> Bool {
+        guard url.absoluteString.count <= 1024,
+              let c = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              c.scheme == "solana", c.host == nil, c.fragment == nil,
+              c.path.range(of: "^[1-9A-HJ-NP-Za-km-z]{32,44}$", options: .regularExpression) != nil,
+              let items = c.queryItems, Set(items.map(\.name)).count == items.count,
+              items.allSatisfy({ ["amount", "label"].contains($0.name) }),
+              let amount = items.first(where: { $0.name == "amount" })?.value,
+              amount.range(of: "^(0|[1-9][0-9]{0,8})(\\.[0-9]{1,9})?$", options: .regularExpression) != nil,
+              amount.contains(where: { "123456789".contains($0) }) else { return false }
+        return true
+    }
     static func origin(_ url: URL) -> String? {
         guard let c = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let scheme = c.scheme?.lowercased(), ["https", "http"].contains(scheme),
