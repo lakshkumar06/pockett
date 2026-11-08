@@ -37,7 +37,7 @@ export async function login(base:string,username:string,password:string) {
   await writeFile(file,JSON.stringify({backend:base,token:result.token}),{mode:0o600});await chmod(file,0o600);
   return {authenticated:true,backend:base};
 }
-async function credentials(base:string):Promise<string> {
+export async function credentials(base:string):Promise<string> {
   if(process.env.POCKET_TOKEN)return process.env.POCKET_TOKEN;
   let c;try{c=JSON.parse(await readFile(credentialsPath(),'utf8'));}catch{throw Error('Login required');}
   if(c.backend!==backendURL(base) || typeof c.token!=='string' || !c.token)throw Error('Login required for this backend');return c.token;
@@ -76,4 +76,25 @@ export async function notificationTest(base:string,event:unknown) {
   if(!credential && process.env.POCKET_APP_CREDENTIAL_FILE)credential=(await readFile(process.env.POCKET_APP_CREDENTIAL_FILE,'utf8')).trim();
   if(!credential)throw Error('Set POCKET_APP_CREDENTIAL or POCKET_APP_CREDENTIAL_FILE on the creator backend');
   return new NotificationClient({backend:base,credential}).send(event);
+}
+
+/** Enqueue real work. A worker with NVIDIA credentials is required to complete it. */
+export async function buildApp(base:string,prompt:string,appId?:string) {
+  if(!prompt.trim()||prompt.length>4000)throw Error('Describe your app in 1–4,000 characters');
+  if(appId&&!opaque(appId))throw Error('Invalid app ID');
+  return request(base,'/jobs',{prompt,...(appId?{appId}:{})},await credentials(base));
+}
+export async function buildStatus(base:string,jobId:string) {
+  if(!opaque(jobId))throw Error('Invalid build ID');return request(base,`/jobs/${jobId}`,undefined,await credentials(base));
+}
+export async function publishApp(base:string,jobId:string) {
+  if(!opaque(jobId))throw Error('Invalid build ID');return registration(await request(base,`/jobs/${jobId}/publish`,{},await credentials(base)));
+}
+export async function connectPhoton(base:string) {
+  const result=await request(base,'/photon-link',{},await credentials(base));
+  return {message:'Send this one-time command to your Photon agent within five minutes.',command:`link ${result.code}`,expiresIn:result.expiresIn};
+}
+export async function openApp(base:string,appId:string) {
+  if(!opaque(appId))throw Error('Invalid app ID');const result=await request(base,`/apps/${appId}/access`,{},await credentials(base));
+  return {url:result.url,expiresIn:result.expiresIn,message:'Private access link. Share the app in Pocket to give someone their own access.'};
 }

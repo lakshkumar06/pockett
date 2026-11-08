@@ -1,6 +1,20 @@
 {
-  "name":"@pocket/runtime","version":"0.4.0","private":true,"type":"module",
-  "engines":{"node":">=24"},
-  "scripts":{"start":"node --env-file-if-exists=../.env src/server.ts","worker":"node --env-file-if-exists=../.env src/worker.ts","test":"node --test test/*.test.ts","check":"tsc --noEmit"},
-  "devDependencies":{"@types/node":"^24.0.0","typescript":"^5.9.3"}
+  "name": "@pocket/runtime",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../.env src/server.ts",
+    "worker": "node --env-file-if-exists=../.env src/worker.ts",
+    "test": "node --test test/*.test.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "playwright": "^1.65.0",
+    "typescript": "^5.9.3"
+  }
 }

@@ -175,10 +175,12 @@ func isRequestCancellation(_ error: Error) -> Bool {
             let listing: RegisteredApp = try await self.request("apps/\(id)")
             guard listing.kind != .native, let entry = listing.url else { throw self.failure("This older native app is no longer supported. Its stored records have been preserved.") }
             var exact: URL?
+            var accessFragment: String?
             if listing.generated == true {
                 let access: AccessReply = try await self.request("apps/\(id)/access", method: "POST", body: [:])
                 guard WebPolicy.safe(access.url, for: entry) else { throw self.failure("Invalid app access link.") }
                 exact = access.url
+                accessFragment = access.url.fragment
             }
             if let event {
                 let target: NotificationLaunch = try await self.request("notification-inbox/\(event)/launch")
@@ -186,6 +188,11 @@ func isRequestCancellation(_ error: Error) -> Bool {
                 exact = target.url
                 let _: OKReply = try await self.request("notification-inbox/\(event)/read", method: "POST", body: [:])
                 if let i = self.inbox.firstIndex(where: { $0.eventId == event }), !self.inbox[i].read { self.inbox[i].read = true; self.unreadCount = max(0,self.unreadCount-1) }
+            }
+            if let accessFragment, let destination = exact,
+               var components = URLComponents(url: destination, resolvingAgainstBaseURL: false) {
+                components.fragment = accessFragment
+                exact = components.url
             }
             self.home.opened(id)
             launch = AppLaunch(app: listing.miniApp, exactTarget: exact)
