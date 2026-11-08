@@ -10,6 +10,7 @@ struct RegisteredApp: Identifiable, Codable, Hashable {
     let revision: Int?
     let creatorKey: String?
     let manifest: WebManifest?
+    let generated: Bool?
     let supported: Bool?
     let summary: String
     let sharedWith: [String]
@@ -19,6 +20,7 @@ struct RegisteredApp: Identifiable, Codable, Hashable {
 private struct AuthReply: Decodable { let token: String; let username: String }
 private struct AppsReply: Decodable { let apps: [RegisteredApp] }
 private struct UserReply: Decodable { let username: String }
+private struct AccessReply: Decodable { let url: URL }
 private struct OKReply: Decodable { let ok: Bool }
 private struct ErrorReply: Decodable { let error: String }
 
@@ -173,6 +175,11 @@ func isRequestCancellation(_ error: Error) -> Bool {
             let listing: RegisteredApp = try await self.request("apps/\(id)")
             guard listing.kind != .native, let entry = listing.url else { throw self.failure("This older native app is no longer supported. Its stored records have been preserved.") }
             var exact: URL?
+            if listing.generated == true {
+                let access: AccessReply = try await self.request("apps/\(id)/access", method: "POST", body: [:])
+                guard WebPolicy.safe(access.url, for: entry) else { throw self.failure("Invalid app access link.") }
+                exact = access.url
+            }
             if let event {
                 let target: NotificationLaunch = try await self.request("notification-inbox/\(event)/launch")
                 guard target.appId == id, WebPolicy.safe(target.url, for: entry) else { throw self.failure("This notification link is unavailable.") }

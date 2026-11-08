@@ -16,3 +16,5 @@ node_modules/
 *.sqlite3*
 .runtime/
 coverage/
+
+Spacetime/spacetimedb/dist/
