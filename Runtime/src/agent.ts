@@ -23,8 +23,19 @@ const tools=[
 export async function complete(messages:any[],fetcher:typeof fetch=fetch){
   const key=process.env.NVIDIA_API_KEY,model=process.env.NEMOTRON_MODEL;
   if(!key||!model||key.startsWith('YOUR_')||model.startsWith('YOUR_'))throw Error('Set NVIDIA_API_KEY and NEMOTRON_MODEL to enable the build agent');
+  // Expose only the next valid step so a successful test cannot restart the build loop.
+  let nextTool='build_app';const names=new Map<string,string>();
+  for(const message of messages){
+    if(message.role==='assistant')for(const call of message.tool_calls??[])names.set(call.id,call.function?.name);
+    if(message.role==='tool'){
+      const name=names.get(message.tool_call_id);if(!name)continue;
+      let ok=false;try{ok=JSON.parse(message.content).ok===true;}catch{}
+      nextTool=ok&&name==='build_app'?'test_app':ok&&name==='test_app'?'finish':'build_app';
+    }
+  }
+  const availableTools=tools.filter(tool=>tool.function.name===nextTool);
   const origin=process.env.NVIDIA_BASE_URL??'https://integrate.api.nvidia.com/v1';
-  const r=await fetcher(origin+'/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,tools,tool_choice:'required',parallel_tool_calls:false,stream:false,max_tokens:4096,temperature:0.2}),signal:AbortSignal.timeout(90000),redirect:'error'});
+  const r=await fetcher(origin+'/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,tools:availableTools,tool_choice:'required',parallel_tool_calls:false,stream:false,max_tokens:4096,temperature:0.2}),signal:AbortSignal.timeout(90000),redirect:'error'});
   if(!r.ok){await r.body?.cancel();throw Error(`NVIDIA request failed (${r.status})`);}const data:any=await r.json();const message=data?.choices?.[0]?.message;if(!message)throw Error('NVIDIA returned no completion');return message;
 }
 export async function build(prompt:string,previous:any,onProgress:(spec:any,trace:Trace[])=>Promise<void>,model=complete){

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dispatch,mini,Fault,type Store} from '../../Spacetime/spacetimedb/src/domain.ts';
 import {envelope,hash} from '../src/spacetime.ts';
-import {build,checks} from '../src/agent.ts';
+import {build,checks,complete} from '../src/agent.ts';
 import {Photon} from '../src/photon.ts';
 function database(){let records=new Map<string,any>();const store:Store={get:(t,k)=>structuredClone(records.get(t+':'+k)),put:(t,k,v)=>{records.set(t+':'+k,structuredClone(v));},delete:(t,k)=>{records.delete(t+':'+k);},all:t=>[...records].filter(([k])=>k.startsWith(t+':')).map(([,v])=>structuredClone(v))};
  const api=(method:string,path:string,body:any={},token='alice',extra:any={})=>{const snapshot=new Map(records);try{const req=envelope(method,path,body,token,extra);return path.startsWith('/mini/')?mini(store,req,100):dispatch(store,req,100);}catch(e){records=snapshot;throw e;}};
@@ -54,4 +54,21 @@ test('Photon consumes its documented 2.0 message shape and deduplicates replies'
  await photon.tick(invoke);await photon.tick(invoke);await photon.tick(invoke);assert.equal(sends,1);
  message.id='msg-build';message.content.text='build a shared list';await photon.tick(invoke);
  assert.equal(api('GET','/jobs').jobs.length,1);
+});
+
+test('NVIDIA tool choices advance after successful checks and reopen repair after failures',async()=>{
+ const originalKey=process.env.NVIDIA_API_KEY,originalModel=process.env.NEMOTRON_MODEL;
+ process.env.NVIDIA_API_KEY='test-fixture';process.env.NEMOTRON_MODEL='test-model';
+ const messages:any[]=[];let offered:string[]=[];
+ const fetcher:typeof fetch=async(_url,options)=>{offered=JSON.parse(String(options?.body)).tools.map((t:any)=>t.function.name);return Response.json({choices:[{message:{tool_calls:[]}}]});};
+ const result=(name:string,ok:boolean)=>{const id=String(messages.length);messages.push({role:'assistant',tool_calls:[{id,function:{name}}]},{role:'tool',tool_call_id:id,content:JSON.stringify({ok})});};
+ try{
+  await complete(messages,fetcher);assert.deepEqual(offered,['build_app']);
+  result('build_app',true);await complete(messages,fetcher);assert.deepEqual(offered,['test_app']);
+  result('test_app',false);await complete(messages,fetcher);assert.deepEqual(offered,['build_app']);
+  result('build_app',true);result('test_app',true);await complete(messages,fetcher);assert.deepEqual(offered,['finish']);
+ }finally{
+  if(originalKey===undefined)delete process.env.NVIDIA_API_KEY;else process.env.NVIDIA_API_KEY=originalKey;
+  if(originalModel===undefined)delete process.env.NEMOTRON_MODEL;else process.env.NEMOTRON_MODEL=originalModel;
+ }
 });
