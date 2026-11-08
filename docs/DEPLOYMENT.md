@@ -2,40 +2,40 @@
 
 Verified November 8, 2026.
 
-- Spacetime Maincloud database: `pockett-hackutd-laksh`
-- Dashboard: https://spacetimedb.com/@krathilakshh/pockett-hackutd-laksh
-- Host: `https://maincloud.spacetimedb.com`
-- Identity: `c200df6a554301064b002145e68e661005301fb335b67143491e529ff95a0ca1`
-- Account uses Maincloud Free's 2,500 TeV monthly credit. After deployment and tests, the dashboard showed 2,499.987 TeV remaining. No paid plan or energy purchase was enabled.
-- The private local `.env` points to this deployment. Never copy its service token into the iPhone app.
+- Public gateway: `https://pockett.orkis.tech`
+- Health check: `https://pockett.orkis.tech/health`
+- Vultr instance: `pockett` in Dallas (`vc2-1c-1gb`, 1 vCPU, 1 GB RAM, 25 GB disk)
+- Instance price: `$0.007/hour`, capped at `$5/month` while provisioned
+- Spacetime host: `https://maincloud.spacetimedb.com`
+- Spacetime database: `pockett-hackutd-laksh`
+- Photon: disabled
 
-Accounts, sessions, app listings, shares, jobs, generated app data, notification state and authorization run in Spacetime. The HTTP gateway and NVIDIA worker currently run on the Mac. They still require a separate public compute deployment for use away from this Mac; no Vultr server was provisioned here.
+The gateway and NVIDIA worker run as Docker Compose services with automatic restart. Caddy terminates HTTPS. The private server `.env` is mode `0600`; NVIDIA and Spacetime credentials are not shipped in the iPhone app or committed to Git.
 
-## Run the gateway and worker
+Pocket now defaults to `https://pockett.orkis.tech`. Existing installs that saved another address can select **Connection**, enter that URL, and tap **Use this server**.
 
-With Node 24 active, in separate terminals from the repository root:
+## Verified flows
 
-```sh
-node --env-file=.env Runtime/src/server.ts
-node --env-file=.env Runtime/src/worker.ts
-```
+- Real public signup and login.
+- A real NVIDIA build reached `ready` through `build_app`, `test_app`, and `finish`, then published successfully.
+- Generated-app records persisted and were visible to both the owner and a shared user.
+- Login, both saved rows, and sharing still worked after the local Mac gateway and worker were stopped.
+- The same checks still passed after a clean Vultr reboot, confirming service restart and durable Spacetime data.
+- The signed iPhone simulator build logged in through the public endpoint and listed the shared `Trip Pack` app.
+- Updating the Spacetime module used `--delete-data=never`; user, app, job, and item counts were unchanged across publication.
 
-For the iPhone simulator, use `http://localhost:8787` in Pocket's Test server setting. This connects through the local gateway to the cloud database. A physical iPhone cannot use its own localhost to reach the Mac. A public HTTPS gateway is still needed for a portable demo.
+The iOS simulator's embedded WebKit view did not render the generated app body even though native login/listing and the generated-app HTTP data API succeeded. Verify that final rendering once on a physical iPhone. APNs push was not tested.
 
-Build for the simulator with signing enabled so Keychain login storage works:
+## Billing
+
+The Vultr account has a `$100` promotional credit applied October 25, 2026. At final verification it had `$93.93` of credit remaining and `$0.04` in pending deployment charges. No paid upgrade or automatic credit purchase was enabled. Vultr's API does not expose the promotional credit's exact expiration date, so that date remains unverified.
+
+Vultr continues billing a stopped instance. To stop billing, destroy instance `20b6dd1e-71ec-43eb-97f3-0b45b5551ade` (`pockett`) in the Vultr dashboard or API. Destroying it removes the gateway/worker VM but does not delete the Spacetime database.
+
+## Local simulator build
 
 ```sh
 xcodebuild -project Pocket.xcodeproj -scheme Pocket -configuration Debug \
   -sdk iphonesimulator -derivedDataPath .build/Xcode \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
 ```
-
-## Verified flows
-
-- Cloud signup/login, sharing/revocation, CLI build/status/publish/open, leased jobs, generated app data, scoped access, notification pairing, idempotency and inbox passed `Runtime/test/live.ts`. This particular suite uses a model fixture.
-- Separately, real NVIDIA Nemotron Lightning created Cloud Groceries through `build_app`, `test_app`, and `finish`; the job and published app were saved in Maincloud.
-- The signed iPhone simulator app signed in, listed Cloud Groceries and opened it with a scoped access link. Its saved row survived a gateway process restart and an in-app reload.
-- Browser add/delete and reload persistence passed against the same Maincloud app. The iPhone automatically displayed the new Shared apples row through the existing polling flow.
-- Direct unauthenticated procedure access failed with `Gateway identity required`; unauthenticated SQL could not access the private users table.
-
-The account and rows used for verification are synthetic test data. The private test fixture is in ignored `.runtime/cloud-app-test.json`; it is not a deployment secret or a credential to distribute. Photon remains disabled. APNs push and a public gateway deployment remain unverified.

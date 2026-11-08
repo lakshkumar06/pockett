@@ -66,7 +66,7 @@ func isRequestCancellation(_ error: Error) -> Bool {
     private var token: String?
     private let service = "dev.local.pocket.session"
     init() {
-        address = UserDefaults.standard.string(forKey: "pocket.server") ?? "http://localhost:8787"
+        address = UserDefaults.standard.string(forKey: "pocket.server") ?? "https://pockett.orkis.tech"
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: address, kSecReturnData as String: true]
         var result: CFTypeRef?
         if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data { token = String(data: data, encoding: .utf8) }
@@ -252,7 +252,7 @@ func isRequestCancellation(_ error: Error) -> Bool {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URLComponents(string: value), (url.scheme == "http" || url.scheme == "https"), url.host != nil,
               url.user == nil, url.password == nil, url.query == nil, url.fragment == nil, url.path.isEmpty else {
-            error = "Enter a server address such as http://your-mac.local:8787"; return
+            error = "Enter a server address such as https://pockett.orkis.tech"; return
         }
         let incoming = pendingURL
                 try? saveToken(nil); username = nil; apps = []
