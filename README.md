@@ -98,6 +98,16 @@ Send the returned `link CODE` to your agent within five minutes. Then send `buil
 
 **Through an editor agent:** [connect the MCP tools](docs/DEPLOY.md#use-it-from-your-editor-through-mcp), then ask it to build, check status, and publish using your backend URL.
 
+## Solana Pay
+
+Generated apps can optionally request SOL payments for tips, club dues, or contributions. Include the amount and recipient's public address in your prompt:
+
+> Build a club dues tracker with a 0.01 SOL payment request to MY_PUBLIC_ADDRESS.
+
+Replace `MY_PUBLIC_ADDRESS` with the intended recipient's Solana address. The app shows the amount and recipient, then opens a compatible wallet for approval. Pocket holds no private keys. Check the wallet's network before approving.
+
+Solana provides the payment handoff; app data stays in SpacetimeDB. This version creates payment requests only: it does not verify settlement, mark entries paid, or prevent repeat payments. See the [Solana Pay guide](docs/SOLANA-PAY.md) for setup, testing, and limitations.
+
 ## A few notes
 
 - These are small generated apps, not deployments of arbitrary source code. Existing websites can also be [added to Pocket](Developer/README.md#cli), with their own hosting.
