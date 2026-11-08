@@ -5,12 +5,14 @@ Implemented and locally checked:
 - Spacetime 2.14 module with private tables, publisher-identity enforcement and transactional product logic.
 - Existing account/listing/sharing/notification REST flows through the new gateway.
 - Nemotron build/test/repair tool loop with persisted jobs and leases; configurable hosted model.
+- Generated miniapps now choose a bounded icon, palette, background treatment and card/row layout, plus tailored actions, empty states, placeholders and poll choices. The fixed renderer supplies responsive metrics, forms, records and loading/access/error/success states without model-authored code.
 - Photon 2.0 account pairing, persistent conversation context, received-message polling and idempotent replies.
 - CLI/MCP build, status, publish, open and Photon-link commands.
 - Vultr plan, price-capped provisioning and SSH runtime upload; Docker Compose HTTPS gateway and worker.
 - iPhone app automatically obtains per-app access when opening generated miniapps.
+- The Home plus button now opens a two-path flow: create a checked miniapp from one prompt with optional appearance controls, or connect an existing hosted app.
 
-Verification completed: existing local regression script, creator tests, runtime type checks and five runtime test groups; real local Spacetime flows including CLI build/status/publish/open; browser add/reload/remove at 390px and 1280px; iOS Simulator build succeeded. NVIDIA responses in tests are fixtures. Photon and Vultr calls are contract/preflight tests, not live deployments.
+Verification completed: existing local regression script, creator tests, runtime type checks and seven runtime test groups; real local Spacetime flows including CLI build/status/publish/open; generated-app visual review at 390px and 1280px; iOS Simulator build succeeded. NVIDIA responses in tests are fixtures. Photon and Vultr calls are contract/preflight tests, not live deployments.
 
 Not configured: live NVIDIA model/key, Photon project/sender/channel, Vultr instance, Maincloud deployment and APNs. `.env` contains placeholders and is ignored. Setup: [docs/SETUP.md](docs/SETUP.md). Challenge evidence and eligibility limits: [docs/TRACKS.md](docs/TRACKS.md).
 

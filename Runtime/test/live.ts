@@ -16,7 +16,7 @@ await api(`/apps/${a.id}/shares`,'POST',{username:bob.username},alice.token);ass
 await api(`/apps/${a.id}/shares/${bob.username}`,'DELETE',undefined,alice.token);
 const cli=async(...args:string[])=>JSON.parse((await promisify(execFile)(process.execPath,[fileURLToPath(new URL('../../Developer/src/cli.ts',import.meta.url)),...args,'--backend',base],{env:{...process.env,POCKET_TOKEN:alice.token}})).stdout);
 const j=await cli('build','A shared grocery list');
-await tick(service,async(prompt,previous,progress)=>{const result={spec:{name:'Groceries',summary:'A shared grocery list',kind:'list',fields:[{key:'item',label:'Item',type:'text'}]},trace:[{tool:'fixture-model',ok:true,detail:'Deterministic integration fixture; no NVIDIA call'}]};await progress(result.spec,result.trace);return result;});
+await tick(service,async(prompt,previous,progress)=>{const result={spec:{name:'Groceries',summary:'A shared grocery list',kind:'list',appearance:{icon:'check',theme:'forest',background:'glow',layout:'cards'},actionLabel:'Add item',emptyTitle:'The basket is clear',emptyBody:'Add the first thing you need.',fields:[{key:'item',label:'Item',type:'text',placeholder:'Milk, fruit, coffee'}]},trace:[{tool:'fixture-model',ok:true,detail:'Deterministic integration fixture; no NVIDIA call'}]};await progress(result.spec,result.trace);return result;});
 assert.equal((await cli('status',j.id)).status,'ready');
 const built=await cli('publish',j.id);
 const access=await cli('open',built.appId);const appToken=new URL(access.url).hash.slice(8);

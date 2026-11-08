@@ -5,11 +5,10 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 export type Plan={provider:'vultr';domain:string;region:string;plan:string;os_id:number;sshkey_id:string[];label:string;user_data:string};
 const root=fileURLToPath(new URL('../../',import.meta.url));
-export async function cloudPlan(domain:string,out:string):Promise<any>{
+export async function cloudPlan(domain:string,out:string,region:string,plan:string,osId:string,sshKeyId:string):Promise<any>{
  if(!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain))throw Error('A public domain is required for HTTPS');
- const {VULTR_REGION:region,VULTR_PLAN:plan,VULTR_OS_ID:os,VULTR_SSH_KEY_ID:key}=process.env;
- if(!region||!plan||!os||!key||!/^\d+$/.test(os))throw Error('Set VULTR_REGION, VULTR_PLAN, VULTR_OS_ID and VULTR_SSH_KEY_ID');
- const value:Plan={provider:'vultr',domain,region,plan,os_id:Number(os),sshkey_id:[key],label:'pockett',user_data:Buffer.from(await readFile(resolve(root,'deploy/cloud-init.yaml'),'utf8')).toString('base64')};
+ if(!region||!plan||!sshKeyId||!/^\d+$/.test(osId))throw Error('Region, plan, numeric OS ID and SSH key ID are required');
+ const value:Plan={provider:'vultr',domain,region,plan,os_id:Number(osId),sshkey_id:[sshKeyId],label:'pockett',user_data:Buffer.from(await readFile(resolve(root,'deploy/cloud-init.yaml'),'utf8')).toString('base64')};
  await writeFile(out,JSON.stringify(value,null,2)+'\n',{flag:'wx',mode:0o600});
  return {planFile:resolve(out),createsResources:false,next:'Review this file. cloud-deploy requires an explicit monthly price ceiling and live provider preflight.'};
 }

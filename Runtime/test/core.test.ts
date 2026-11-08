@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dispatch,mini,Fault,type Store} from '../../Spacetime/spacetimedb/src/domain.ts';
+import {dispatch,mini,Fault,validateSpec,type Store} from '../../Spacetime/spacetimedb/src/domain.ts';
 import {envelope,hash} from '../src/spacetime.ts';
 import {build,checks,complete} from '../src/agent.ts';
 import {Photon} from '../src/photon.ts';
 function database(){let records=new Map<string,any>();const store:Store={get:(t,k)=>structuredClone(records.get(t+':'+k)),put:(t,k,v)=>{records.set(t+':'+k,structuredClone(v));},delete:(t,k)=>{records.delete(t+':'+k);},all:t=>[...records].filter(([k])=>k.startsWith(t+':')).map(([,v])=>structuredClone(v))};
  const api=(method:string,path:string,body:any={},token='alice',extra:any={})=>{const snapshot=new Map(records);try{const req=envelope(method,path,body,token,extra);return path.startsWith('/mini/')?mini(store,req,100):dispatch(store,req,100);}catch(e){records=snapshot;throw e;}};
  for(const user of ['alice','bob','eve'])api('POST','/signup',{username:user},'',{proof:'password-hash',salt:'salt',secretHash:hash(user)});return {api,store};}
-const spec={name:'House list',summary:'Things we need',kind:'list',fields:[{key:'item',label:'Item',type:'text'}]};
+const spec={name:'House list',summary:'Things we need',kind:'list',appearance:{icon:'check',theme:'forest',background:'glow',layout:'cards'},actionLabel:'Add item',emptyTitle:'Your list is clear',emptyBody:'Add what the house needs next.',fields:[{key:'item',label:'Item',type:'text',placeholder:'Milk, batteries, soap'}]};
 const manifest={schemaVersion:'web-v1',creatorKey:'house-list',name:'House list',summary:'Things we need',entryURL:'https://example.com/',iconURL:'https://example.com/icon.svg',version:'1'};
 test('sharing, pairing consent, idempotency and revocation are enforced in the domain',()=>{
  const {api}=database();const app=api('POST','/web-apps',{manifest});
@@ -45,6 +45,12 @@ test('model receives failed tool results and must repair before finishing',async
  let turn=0;const steps=[['build_app',{spec:{...spec,kind:'arbitrary-code'}}],['build_app',{spec}],['test_app',{}],['finish',{}]];
  const result=await build('Make a list',null,async()=>{},async messages=>{if(turn===1)assert.match(messages.at(-1).content,/Choose list/);const [name,args]=steps[turn++];return {tool_calls:[{id:'call'+turn,type:'function',function:{name,arguments:JSON.stringify(args)}}]};});
  assert.equal(result.spec.name,'House list');assert.deepEqual(result.trace.map(t=>t.ok),[false,true,true,true]);assert.equal(checks(spec).ok,true);
+});
+test('appearance and choice fields stay within the fixed safe design system',()=>{
+ const poll={name:'Lunch vote',summary:'Choose today’s lunch',kind:'poll',appearance:{icon:'inbox',theme:'ember',background:'mesh',layout:'cards'},actionLabel:'Cast vote',emptyTitle:'No votes yet',emptyBody:'Be the first to choose lunch.',fields:[{key:'choice',label:'Lunch',type:'choice',placeholder:'Pick one',options:['Tacos','Salad','Pizza']}]};
+ assert.equal(checks(poll).ok,true);assert.doesNotThrow(()=>validateSpec(poll));
+ assert.throws(()=>validateSpec({...poll,appearance:{...poll.appearance,theme:'neon'}}),/Invalid appearance/);
+ assert.throws(()=>validateSpec({...poll,fields:[{...poll.fields[0],options:['Tacos','Tacos']}]}),/Duplicate choice/);
 });
 test('Photon consumes its documented 2.0 message shape and deduplicates replies',async()=>{
  const {api}=database();api('POST','/photon-link',{},'alice',{secretHash:hash('link-secret')});let sends=0;

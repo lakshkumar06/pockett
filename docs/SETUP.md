@@ -68,10 +68,10 @@ No public webhook is needed. This integration has contract tests against Photon'
 
 ## Vultr
 
-Publish the module to Spacetime Maincloud first, using a project-dedicated identity, and update the Spacetime URL/database/token in `.env`. Set `POCKET_DOMAIN` and `POCKET_PUBLIC_ORIGIN=https://YOUR_DOMAIN`. Set Vultr region, plan, Ubuntu OS ID, and SSH key ID. Your matching private SSH key must be available through your SSH agent. Use a current Ubuntu image supporting `docker-compose-v2`.
+Publish the module to Spacetime Maincloud first, using a project-dedicated identity, and update the Spacetime URL/database/token in `.env`. Set `POCKET_DOMAIN`, `POCKET_PUBLIC_ORIGIN=https://YOUR_DOMAIN`, and the single secret `VULTR_API_KEY`. Pass the Vultr region, plan, Ubuntu OS ID, and SSH key ID explicitly when creating the reviewed deployment plan. Your matching private SSH key must be available through your SSH agent. Use a current Ubuntu image supporting `docker-compose-v2`.
 
 ```sh
-node --env-file=.env Developer/src/cli.ts cloud-plan pocket.example.com --out deploy-plan.json
+node Developer/src/cli.ts cloud-plan pocket.example.com --out deploy-plan.json --region YOUR_REGION --plan YOUR_PLAN --os-id YOUR_UBUNTU_OS_ID --ssh-key-id YOUR_SSH_KEY_ID
 node --env-file=.env Developer/src/cli.ts cloud-deploy deploy-plan.json --max-monthly 10
 ```
 

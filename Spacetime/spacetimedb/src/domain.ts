@@ -43,12 +43,28 @@ export function manifest(value:any) {
   return value;
 }
 export function validateSpec(s:any) {
-  if(!s||Object.keys(s).some(k=>!['name','summary','kind','fields','accent'].includes(k)))fail(400,'Invalid app specification');
+  if(!s||Object.keys(s).some(k=>!['name','summary','kind','fields','accent','appearance','actionLabel','emptyTitle','emptyBody'].includes(k)))fail(400,'Invalid app specification');
   text(s.name,60,'name');text(s.summary,160,'summary');
   if(!['list','tracker','poll'].includes(s.kind))fail(400,'Choose list, tracker, or poll');
   if(!Array.isArray(s.fields)||s.fields.length<1||s.fields.length>8)fail(400,'Use one to eight fields');
-  const seen=new Set<string>();for(const f of s.fields){if(!f||Object.keys(f).some(k=>!['key','label','type'].includes(k))||!/^([a-z][a-z0-9_]{0,23})$/.test(f.key)||seen.has(f.key)||['__proto__','constructor','prototype'].includes(f.key))fail(400,'Invalid or duplicate field');seen.add(f.key);text(f.label,40,'field label');if(!['text','number','boolean'].includes(f.type))fail(400,'Invalid field type');}
-  if(s.accent&&!/^#[\da-f]{6}$/i.test(s.accent))fail(400,'Invalid accent');return s;
+  const seen=new Set<string>();for(const f of s.fields){
+    if(!f||Object.keys(f).some(k=>!['key','label','type','placeholder','options'].includes(k))||!/^([a-z][a-z0-9_]{0,23})$/.test(f.key)||seen.has(f.key)||['__proto__','constructor','prototype'].includes(f.key))fail(400,'Invalid or duplicate field');
+    seen.add(f.key);text(f.label,40,'field label');if(!['text','number','boolean','choice'].includes(f.type))fail(400,'Invalid field type');
+    if(f.placeholder!==undefined)text(f.placeholder,80,'placeholder');
+    if(f.type==='choice'){
+      if(!Array.isArray(f.options)||f.options.length<2||f.options.length>8)fail(400,'Choice fields need two to eight options');
+      const options=new Set<string>();for(const option of f.options){const value=text(option,40,'choice option');if(options.has(value))fail(400,'Duplicate choice option');options.add(value);}
+    }else if(f.options!==undefined)fail(400,'Only choice fields use options');
+  }
+  if(s.accent&&!/^#[\da-f]{6}$/i.test(s.accent))fail(400,'Invalid accent');
+  if(s.appearance){
+    const a=s.appearance;if(Array.isArray(a)||Object.keys(a).some(k=>!['icon','theme','background','layout'].includes(k)))fail(400,'Invalid appearance');
+    if(!['check','notebook-pen','calendar-days','wallet','timer','book-open','user-round','grid-2x2','inbox','bell'].includes(a.icon)||!['forest','ember','ocean','violet','paper'].includes(a.theme)||!['glow','mesh','grid','plain'].includes(a.background)||!['cards','rows'].includes(a.layout))fail(400,'Invalid appearance');
+  }
+  if(s.actionLabel!==undefined)text(s.actionLabel,28,'action label');
+  if(s.emptyTitle!==undefined)text(s.emptyTitle,60,'empty title');
+  if(s.emptyBody!==undefined)text(s.emptyBody,120,'empty message');
+  return s;
 }
 export function dispatch(db:Store,r:Request,now:number):any {
   const b=r.body??{},p=r.path.split('/').filter(Boolean),method=r.method,q=r.query??{};
@@ -137,7 +153,7 @@ export function dispatch(db:Store,r:Request,now:number):any {
   function publish(j:RecordValue,owner:string){
     const spec=validateSpec(j.spec);const id=j.appId??j.id;const old=db.get('apps',id);if(old&&old.owner!==owner)fail(403,'Not your app');
     const origin=safeURL(b.publicOrigin);const entryURL=originOf(origin)+`/mini/${id}/`;
-    const m={schemaVersion:'web-v1',creatorKey:'built-'+id,name:spec.name,summary:spec.summary,entryURL,iconURL:originOf(origin)+'/icon.svg',version:String((old?.revision??0)+1)};
+    const m={schemaVersion:'web-v1',creatorKey:'built-'+id,name:spec.name,summary:spec.summary,entryURL,iconURL:originOf(origin)+`/mini/${id}/icon.svg`,version:String((old?.revision??0)+1)};
     const a=put('apps',id,{owner,generated:true,name:spec.name,summary:spec.summary,url:entryURL,kind:'web',supported:true,manifest:m,creatorKey:m.creatorKey,revision:(old?.revision??0)+1,sharedWith:old?.sharedWith??[],spec});
     put('jobs',j.id,{...j,status:'published',appId:id});return reg(a);
   }
@@ -196,7 +212,7 @@ export function mini(db:Store,r:Request,now:number):any {
   if(r.method==='POST'){
     if(all.length>=1000)fail(409,'This app has reached 1,000 entries');const data=r.body.data;if(!data||Array.isArray(data))fail(400,'Invalid entry');
     const spec=validateSpec(a!.spec);if(Object.keys(data).some(k=>!spec.fields.some((f:any)=>f.key===k)))fail(400,'Unknown field');
-    for(const f of spec.fields){const v=data[f.key];if(typeof v!==f.type.replace('text','string')||(typeof v==='string'&&v.length>500)||(typeof v==='number'&&!Number.isFinite(v)))fail(400,'Check '+f.label);}
+    for(const f of spec.fields){const v=data[f.key],expected=['text','choice'].includes(f.type)?'string':f.type;if(typeof v!==expected||(typeof v==='string'&&v.length>500)||(typeof v==='number'&&!Number.isFinite(v))||(f.type==='choice'&&!f.options.includes(v)))fail(400,'Check '+f.label);}
     const item={id:r.id,appId:a!.id,data,author:c!.username,createdAt:now};db.put('items',r.id,item);return item;
   }
   if(r.method==='DELETE'){const item=db.get('items',p[3]);if(!item||item.appId!==a!.id||(item.author!==c!.username&&a!.owner!==c!.username))fail(404,'Entry unavailable');db.delete('items',item!.id);return {ok:true};}

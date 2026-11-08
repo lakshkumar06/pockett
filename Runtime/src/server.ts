@@ -3,7 +3,7 @@ import {scrypt as derive,randomBytes} from 'node:crypto';
 import {promisify} from 'node:util';
 import {pathToFileURL} from 'node:url';
 import {call,envelope,hash,secret,ApiError,publicOrigin} from './spacetime.ts';
-import {render} from './template.ts';
+import {render,renderIconSVG} from './template.ts';
 const scrypt=promisify(derive);
 export function createGateway(invoke=call){
   const attempts=new Map<string,{n:number,until:number}>();
@@ -15,6 +15,11 @@ export function createGateway(invoke=call){
       if(u.pathname.startsWith('/internal/'))throw new ApiError(404,'Not found');
       if(u.pathname==='/health'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({service:'pocket',state:'spacetime',configured:!!process.env.SPACETIME_TOKEN}));return;}
       if(u.pathname==='/icon.svg'){res.setHeader('Content-Type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#316849"/><path d="M17 20h30v17q-15 21-30 0z" fill="#f7f5ee"/><path d="m25 29 7 7 7-7" fill="none" stroke="#316849" stroke-width="4"/></svg>');return;}
+      const appIcon=u.pathname.match(/^\/mini\/([\w-]+)\/icon\.svg$/);
+      if(appIcon&&method==='GET'){
+        const result=await invoke(envelope('GET',`/mini/${appIcon[1]}/spec`));
+        res.setHeader('Content-Type','image/svg+xml');res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; sandbox");res.end(renderIconSVG(result.spec));return;
+      }
       const page=u.pathname.match(/^\/mini\/([\w-]+)\/$/);
       if(page&&method==='GET'){const result=await invoke(envelope('GET',`/mini/${page[1]}/spec`));res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");res.end(render(result.spec,page[1]));return;}
       let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>16384)throw new ApiError(413,'Request too large');}
