@@ -113,30 +113,17 @@ struct WebViewer: View {
                 .background(PocketStyle.canvas)
             }
         }
-        .overlay(alignment: .bottom) {
-            HStack(spacing: 4) {
-                Button { session.webView.goBack() } label: {
-                    Image(systemName: "chevron.left").frame(width: 42, height: 42)
-                }.disabled(!session.canGoBack).accessibilityLabel("Go back")
-                VStack(spacing: 1) {
-                    Text(session.app.name).font(.pocketCaption).lineLimit(1)
-                    if session.loading { ProgressView().controlSize(.mini).accessibilityLabel("Loading page") }
-                }.frame(maxWidth: .infinity)
-                Menu {
-                    Button("Reload app", systemImage: "arrow.clockwise") { session.reload() }
-                    Button("App home", systemImage: "house") { session.load(session.app.url) }
-                    ShareLink(item: session.app.deepLink) { Label("Share Pocket link", systemImage: "square.and.arrow.up") }
-                } label: { Image(systemName: "ellipsis").frame(width: 42, height: 42) }
-                    .accessibilityLabel("App options")
-                Button { PocketHaptics.tap(); dismiss() } label: {
-                    Image(systemName: "xmark").frame(width: 42, height: 42)
-                }.accessibilityLabel("Return to Pocket")
+        .overlay(alignment: .topTrailing) {
+            Button { PocketHaptics.tap(); dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(.black.opacity(0.72), in: Circle())
             }
-            .font(.body).foregroundStyle(PocketStyle.ink)
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(PocketStyle.line))
-            .padding(.horizontal, 12).padding(.bottom, 8)
+            .buttonStyle(PocketPressStyle())
+            .accessibilityLabel("Return to Pocket")
+            .padding(.trailing, 16).padding(.top, 8)
         }
         .confirmationDialog("Open outside Pocket?", isPresented: Binding(get: { session.externalURL != nil }, set: { if !$0 { session.externalURL = nil } }), titleVisibility: .visible) {
             if let url = session.externalURL { Button("Open \(url.host ?? url.scheme ?? "link")") { openURL(url); session.externalURL = nil } }

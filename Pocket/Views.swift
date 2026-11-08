@@ -128,6 +128,9 @@ struct HostedAppScreen: View {
 enum PocketStyle {
     static let accent = Color(red: 1, green: 0.35, blue: 0.08)
     static let accentPressed = Color(red: 0.88, green: 0.25, blue: 0.04)
+    static let heroOrange = Color(red: 0.84, green: 0.294, blue: 0.0672)
+    static let heroInk = Color(red: 0.075, green: 0.06, blue: 0.055)
+    static let heroMuted = heroInk.opacity(0.68)
     static let ink = Color(red: 0.96, green: 0.96, blue: 0.97)
     static let secondaryInk = Color(red: 0.68, green: 0.68, blue: 0.72)
     static let canvas = Color(red: 0.055, green: 0.055, blue: 0.063)
@@ -141,6 +144,7 @@ enum PocketStyle {
 }
 
 extension Font {
+    static let pocketHero = Font.custom("CalSansTextUI-SemiBold", size: 38, relativeTo: .largeTitle)
     static let pocketDisplay = Font.custom("CalSansTextUI-SemiBold", size: 28, relativeTo: .largeTitle)
     static let pocketTitle = Font.custom("CalSansTextUI-SemiBold", size: 20, relativeTo: .title2)
     static let pocketHeadline = Font.custom("CalSansTextUI-SemiBold", size: 16, relativeTo: .headline)
@@ -157,6 +161,79 @@ struct PocketHeading: View {
             if !eyebrow.isEmpty { Text(eyebrow).font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk) }
             Text(title).font(.pocketDisplay).foregroundStyle(PocketStyle.ink)
         }.accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+    }
+}
+
+struct PixelHeroHeader<Content: View>: View {
+    let eyebrow: String
+    let title: String
+    let message: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            PocketStyle.heroOrange
+            PixelMosaic()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(eyebrow.uppercased())
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .tracking(1.4)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(PocketStyle.heroInk.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
+                    .padding(.bottom, 16)
+                Text(title)
+                    .font(.pocketHero)
+                    .tracking(-0.8)
+                    .lineSpacing(-2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Text(message)
+                    .font(.pocketBody)
+                    .foregroundStyle(PocketStyle.heroMuted)
+                    .padding(.top, 7)
+                content().padding(.top, 18)
+            }
+            .foregroundStyle(PocketStyle.heroInk)
+            .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity, minHeight: 248, alignment: .bottomLeading)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 28, bottomTrailingRadius: 28))
+        .shadow(color: .black.opacity(0.22), radius: 18, y: 10)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct PixelMosaic: View {
+    var body: some View {
+        Canvas { context, size in
+            let cell = max(12, floor(size.width / 26))
+            let columns = Int(ceil(size.width / cell))
+            let rows = Int(ceil(size.height / cell))
+
+            for row in 0..<rows {
+                for column in 0..<columns {
+                    let code = (row * 7 + column * 11 + row * column) % 19
+                    guard code < 5 else { continue }
+                    let rect = CGRect(x: CGFloat(column) * cell, y: CGFloat(row) * cell, width: cell, height: cell)
+                    let tint = code < 3 ? PocketStyle.heroInk.opacity(0.04 + Double(code) * 0.025) : Color.white.opacity(0.045)
+                    context.fill(Path(rect), with: .color(tint))
+                }
+            }
+
+            let large = cell * 2
+            let blocks = [
+                CGRect(x: size.width - large, y: 0, width: large, height: large),
+                CGRect(x: size.width - large * 2, y: large, width: large, height: large),
+                CGRect(x: size.width - large, y: large * 2, width: large, height: large),
+                CGRect(x: 0, y: size.height - cell, width: cell, height: cell)
+            ]
+            for (index, rect) in blocks.enumerated() {
+                context.fill(Path(rect), with: .color(PocketStyle.heroInk.opacity(index == 3 ? 0.08 : 0.045)))
+            }
+        }
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 }
 
@@ -179,6 +256,18 @@ struct PocketPressStyle: ButtonStyle {
 }
 
 extension View {
+    func pocketHeroStatusBar() -> some View {
+        overlay(alignment: .top) {
+            GeometryReader { geometry in
+                PocketStyle.heroOrange
+                    .frame(height: geometry.safeAreaInsets.top)
+                    .offset(y: -geometry.safeAreaInsets.top)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
     func pocketList() -> some View {
         scrollContentBackground(.hidden)
             .background(PocketStyle.canvas)
@@ -362,6 +451,7 @@ struct HomeView: View {
     @EnvironmentObject private var home: HomeStore
     let open: (String) -> Void
     @State private var adding = false
+    @State private var detailApp: RegisteredApp?
     @State private var importing = false
     @State private var query = ""
     @State private var deleting: RegisteredApp?
@@ -383,18 +473,27 @@ struct HomeView: View {
     var body: some View {
         List {
             Section {
-                HStack(alignment: .center) {
-                    Text("Your apps").font(.pocketDisplay).accessibilityAddTraits(.isHeader)
-                    Spacer()
-                    Button { adding = true; PocketHaptics.tap() } label: {
-                        Image(systemName: "plus").font(.body.weight(.semibold))
-                            .frame(width: 42, height: 42).background(PocketStyle.accent, in: Circle()).foregroundStyle(.white)
-                    }.buttonStyle(PocketPressStyle()).accessibilityLabel("Add app")
+                PixelHeroHeader(
+                    eyebrow: "Home",
+                    title: backend.username.map { "Welcome back, \($0)" } ?? "Welcome back",
+                    message: "Your apps are ready when you are"
+                ) {
+                    HStack(spacing: 10) {
+                        SearchField(text: $query, placeholder: "Search your apps")
+                        Button { adding = true; PocketHaptics.tap() } label: {
+                            Image(systemName: "plus")
+                                .font(.body.weight(.bold))
+                                .frame(width: 48, height: 48)
+                                .background(PocketStyle.heroInk, in: RoundedRectangle(cornerRadius: PocketStyle.fieldRadius))
+                                .foregroundStyle(.white)
+                        }
+                        .buttonStyle(PocketPressStyle())
+                        .accessibilityLabel("Add app")
+                    }
                 }
-                SearchField(text: $query, placeholder: "Search your apps")
             }
             .listRowBackground(Color.clear).listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 14, leading: 20, bottom: 8, trailing: 20))
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 18, trailing: 0))
 
             if !recent.isEmpty && query.isEmpty {
                 Section("Recently opened") {
@@ -405,8 +504,12 @@ struct HomeView: View {
                                     VStack(alignment: .leading, spacing: 10) {
                                         recentIcon(app)
                                         Text(app.name).font(.pocketHeadline).lineLimit(1)
-                                        Text(app.url.host ?? app.url.absoluteString).font(.pocketCaption)
-                                            .foregroundStyle(PocketStyle.secondaryInk).lineLimit(1)
+                                        if let registered = backend.apps.first(where: { $0.id == app.id }) {
+                                            PublisherLabel(name: registered.owner)
+                                        } else {
+                                            Text(app.url.host ?? app.url.absoluteString).font(.pocketCaption)
+                                                .foregroundStyle(PocketStyle.secondaryInk).lineLimit(1)
+                                        }
                                     }
                                     .padding(14).frame(width: 148, alignment: .leading)
                                     .background(PocketStyle.surface, in: RoundedRectangle(cornerRadius: PocketStyle.cardRadius))
@@ -446,7 +549,11 @@ struct HomeView: View {
             }
         }
         .listStyle(.plain).pocketList().toolbar(.hidden, for: .navigationBar)
+        .pocketHeroStatusBar()
         .refreshable { await backend.refresh() }
+        .navigationDestination(item: $detailApp) { app in
+            RegisteredAppDetail(id: app.id, open: open)
+        }
         .sheet(isPresented: $adding) { AddAppView(importMode: false) { showToast("App added") } }
         .sheet(isPresented: $importing) { AddAppView(importMode: true) { showToast("App imported") } }
         .confirmationDialog("Delete \(deleting?.name ?? "this app")?", isPresented: Binding(
@@ -468,27 +575,28 @@ struct HomeView: View {
     }
 
     private func appRow(_ app: RegisteredApp) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 0) {
             Button { open(app.id) } label: {
                 HStack(spacing: 14) {
                     AppIdentity(app: app, size: 52)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(app.name).font(.pocketHeadline).foregroundStyle(PocketStyle.ink)
-                        HStack(spacing: 5) {
-                            Text(app.url?.host ?? (app.kind == .native ? "Unsupported app" : "Web app"))
-                            if let opened = home.state.lastOpened[app.id] {
-                                Text("·"); Text(opened, style: .relative)
-                            }
-                        }.font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk).lineLimit(1)
+                        PublisherLabel(name: app.owner)
                     }
                     Spacer(minLength: 0)
-                }.contentShape(Rectangle())
+                }
+                .padding(.vertical, 7)
+                .contentShape(Rectangle())
             }.buttonStyle(PocketPressStyle())
-            NavigationLink { RegisteredAppDetail(id: app.id, open: open) } label: {
-                Image(systemName: "ellipsis").frame(width: 42, height: 42).foregroundStyle(PocketStyle.secondaryInk)
-            }.accessibilityLabel("Details for \(app.name)")
+            Button { detailApp = app; PocketHaptics.tap() } label: {
+                Image(systemName: "ellipsis")
+                    .frame(width: 44, height: 66)
+                    .contentShape(Rectangle())
+                    .foregroundStyle(PocketStyle.secondaryInk)
+            }
+            .buttonStyle(PocketPressStyle())
+            .accessibilityLabel("Details for \(app.name)")
         }
-        .padding(.vertical, 7)
         .listRowBackground(PocketStyle.canvas).listRowSeparatorTint(PocketStyle.line)
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if app.kind != .native {
@@ -542,17 +650,22 @@ struct SearchView: View {
     var body: some View {
         List {
             Section {
-                Text("Search").font(.pocketDisplay).accessibilityAddTraits(.isHeader)
-                SearchField(text: $query, placeholder: "Apps, tools, websites")
+                PixelHeroHeader(
+                    eyebrow: "Discover",
+                    title: "Find what you need.",
+                    message: "Search apps, tools, and websites."
+                ) {
+                    SearchField(text: $query, placeholder: "Apps, tools, websites")
+                }
             }
             .listRowBackground(Color.clear).listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 14, leading: 20, bottom: 10, trailing: 20))
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 18, trailing: 0))
 
             if !owned.isEmpty {
                 Section("Your apps") {
                     ForEach(owned) { app in
                         NavigationLink { RegisteredAppDetail(id: app.id, open: open) } label: {
-                            AppListLabel(name: app.name, detail: app.url?.host ?? "Web app") {
+                            AppListLabel(name: app.name, detail: "", publisher: app.owner) {
                                 AppIdentity(app: app, size: 48)
                             }
                         }
@@ -575,6 +688,7 @@ struct SearchView: View {
             }
         }
         .listStyle(.plain).pocketList().toolbar(.hidden, for: .navigationBar)
+        .pocketHeroStatusBar()
     }
 }
 
@@ -611,26 +725,36 @@ struct ActivityView: View {
     private var entries: [InboxEntry] {
         backend.inbox.filter { (appFilter.isEmpty || $0.appId == appFilter) && (!unreadOnly || !$0.read) }
     }
+    private var heroTitle: String {
+        if backend.unreadCount == 0 { return "You’re all caught up." }
+        return backend.unreadCount == 1 ? "One update is waiting." : "\(backend.unreadCount) updates are waiting."
+    }
 
     var body: some View {
         List {
             Section {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Activity").font(.pocketDisplay).accessibilityAddTraits(.isHeader)
-                    Spacer()
-                    if backend.unreadCount > 0 { Text("\(backend.unreadCount) unread").font(.pocketCaption).foregroundStyle(PocketStyle.accent) }
-                }
-                HStack {
-                    Picker("App", selection: $appFilter) {
-                        Text("All apps").tag("")
-                        ForEach(backend.apps.filter { $0.kind != .native }) { Text($0.name).tag($0.id) }
-                    }.pickerStyle(.menu)
-                    Spacer()
-                    Toggle("Unread", isOn: $unreadOnly).toggleStyle(.button).buttonStyle(.bordered)
+                PixelHeroHeader(
+                    eyebrow: "Activity",
+                    title: heroTitle,
+                    message: "Updates from the apps you connected."
+                ) {
+                    HStack {
+                        Picker("App", selection: $appFilter) {
+                            Text("All apps").tag("")
+                            ForEach(backend.apps.filter { $0.kind != .native }) { Text($0.name).tag($0.id) }
+                        }.pickerStyle(.menu)
+                        Spacer()
+                        Toggle("Unread", isOn: $unreadOnly).toggleStyle(.button).buttonStyle(.bordered)
+                    }
+                    .font(.pocketHeadline)
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14).frame(height: 48)
+                    .background(PocketStyle.heroInk, in: RoundedRectangle(cornerRadius: PocketStyle.fieldRadius))
                 }
             }
             .listRowBackground(Color.clear).listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 14, leading: 20, bottom: 12, trailing: 20))
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 18, trailing: 0))
 
             if entries.isEmpty {
                 Section {
@@ -669,6 +793,7 @@ struct ActivityView: View {
             }
         }
         .listStyle(.plain).pocketList().toolbar(.hidden, for: .navigationBar)
+        .pocketHeroStatusBar()
         .sensoryFeedback(.selection, trigger: unreadOnly)
         .refreshable { await backend.refreshActivity(appId: appFilter.isEmpty ? nil : appFilter) }
         .onChange(of: appFilter) { _, value in Task { await backend.refreshActivity(appId: value.isEmpty ? nil : value, setFilter: true) } }
@@ -730,7 +855,7 @@ struct RegisteredAppDetail: View {
                         VStack(alignment: .leading, spacing: 14) {
                             AppIdentity(app: app, size: 76)
                             Text(app.name).font(.pocketDisplay)
-                            Text(app.url?.host ?? "Web app").font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk)
+                            PublisherLabel(name: app.owner)
                             if !app.summary.isEmpty { Text(app.summary).font(.pocketBody).foregroundStyle(PocketStyle.secondaryInk) }
                             if app.kind == .native {
                                 Text("This older native app is no longer supported.").font(.pocketBody).foregroundStyle(PocketStyle.secondaryInk)
@@ -818,19 +943,19 @@ private struct ProfileScreen: View {
     var body: some View {
         List {
             Section {
-                Text("You").font(.pocketDisplay).accessibilityAddTraits(.isHeader)
-                HStack(spacing: 14) {
-                    AppMark(name: username, size: 58)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("@" + username).font(.pocketTitle)
-                        Text("Pocket account").font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk)
+                PixelHeroHeader(
+                    eyebrow: "Account",
+                    title: "Good to see you, \(username).",
+                    message: "Manage your apps, updates, and account."
+                ) {
+                    HStack(spacing: 10) {
+                        HeroMetric(value: backend.apps.filter { $0.owner == username }.count, label: "Your apps")
+                        HeroMetric(value: backend.apps.filter { $0.owner != username }.count, label: "Shared")
                     }
-                }.padding(.vertical, 8)
-                HStack(spacing: 10) {
-                    StatCard(value: backend.apps.filter { $0.owner == username }.count, label: "Your apps")
-                    StatCard(value: backend.apps.filter { $0.owner != username }.count, label: "Shared")
                 }
-            }.listRowBackground(Color.clear).listRowSeparator(.hidden)
+            }
+            .listRowBackground(Color.clear).listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 18, trailing: 0))
 
             Section("Settings") {
                 SettingsRow(symbol: "moon.fill", title: "Appearance", detail: "Dark")
@@ -980,15 +1105,41 @@ private struct QuickActionLabel: View {
 private struct AppListLabel<Icon: View>: View {
     let name: String
     let detail: String
+    var publisher: String? = nil
     @ViewBuilder let icon: () -> Icon
     var body: some View {
         HStack(spacing: 14) {
             icon()
             VStack(alignment: .leading, spacing: 4) {
                 Text(name).font(.pocketHeadline).foregroundStyle(PocketStyle.ink)
-                Text(detail).font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk).lineLimit(1)
+                if let publisher {
+                    PublisherLabel(name: publisher)
+                } else {
+                    Text(detail).font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk).lineLimit(1)
+                }
             }
         }.padding(.vertical, 5)
+    }
+}
+
+private struct PublisherLabel: View {
+    let name: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(String(name.prefix(1)).uppercased())
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(PocketStyle.ink)
+                .frame(width: 20, height: 20)
+                .background(PocketStyle.soft, in: Circle())
+                .accessibilityHidden(true)
+            Text(name)
+                .font(.pocketCaption)
+                .foregroundStyle(PocketStyle.secondaryInk)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Published by \(name)")
     }
 }
 
@@ -1049,6 +1200,21 @@ private struct StatCard: View {
         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
         .background(PocketStyle.surface, in: RoundedRectangle(cornerRadius: PocketStyle.cardRadius))
         .overlay(RoundedRectangle(cornerRadius: PocketStyle.cardRadius).stroke(PocketStyle.line))
+    }
+}
+
+private struct HeroMetric: View {
+    let value: Int
+    let label: String
+    var body: some View {
+        HStack(spacing: 9) {
+            Text("\(value)").font(.pocketTitle).monospacedDigit()
+            Text(label).font(.pocketCaption).foregroundStyle(.white.opacity(0.68))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14).frame(maxWidth: .infinity).frame(height: 48)
+        .background(PocketStyle.heroInk, in: RoundedRectangle(cornerRadius: PocketStyle.fieldRadius))
     }
 }
 

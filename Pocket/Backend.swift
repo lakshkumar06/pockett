@@ -329,68 +329,75 @@ struct AccountForm: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text(signup ? "Create account" : "Sign in").font(.pocketDisplay)
+            VStack(spacing: 0) {
+                PixelHeroHeader(
+                    eyebrow: "Pocket",
+                    title: signup ? "Make Pocket yours." : "Welcome back.",
+                    message: signup ? "Create an account for your apps and saved places." : "Sign in to pick up where you left off."
+                ) { EmptyView() }
 
-                Picker("Account", selection: $signup) {
-                    Text("Sign in").tag(false)
-                    Text("Create account").tag(true)
-                }.pickerStyle(.segmented)
+                VStack(alignment: .leading, spacing: 22) {
+                    Picker("Account", selection: $signup) {
+                        Text("Sign in").tag(false)
+                        Text("Create account").tag(true)
+                    }.pickerStyle(.segmented)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("", text: $username, prompt: Text("Username").foregroundStyle(PocketStyle.secondaryInk))
-                        .textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .focused($focused, equals: .username).submitLabel(.next)
-                        .onSubmit { focused = .password }
-                        .pocketField()
-                    if submitted && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Enter your username.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
-                    }
-
-                    HStack(spacing: 8) {
-                        Group {
-                            if showPassword {
-                                TextField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
-                            } else {
-                                SecureField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
-                            }
-                        }
-                        .focused($focused, equals: .password).submitLabel(.go)
-                        .onSubmit { authenticate() }
-                        Button { showPassword.toggle() } label: {
-                            Image(systemName: showPassword ? "eye.slash" : "eye").frame(width: 32, height: 32)
-                        }.accessibilityLabel(showPassword ? "Hide password" : "Show password")
-                    }.pocketField()
-                    if submitted && password.count < 8 {
-                        Text("Use at least 8 characters.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
-                    }
-                }
-
-                Button(action: authenticate) {
-                    PrimaryButtonLabel(title: backend.busy ? "Signing in…" : (signup ? "Create account" : "Sign in"))
-                }.buttonStyle(PocketPressStyle()).disabled(backend.busy)
-
-                if let error = backend.error {
-                    Label(error, systemImage: "exclamationmark.circle")
-                        .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
-                }
-
-                DisclosureGroup("Connection") {
                     VStack(alignment: .leading, spacing: 10) {
-                        TextField("", text: $server, prompt: Text("Server address").foregroundStyle(PocketStyle.secondaryInk))
-                            .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().pocketField()
-                        Button("Use this server") { backend.changeServer(server) }.disabled(server == backend.address)
-                        Text("Changing servers signs you out.").font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk)
-                    }.padding(.top, 10)
+                        TextField("", text: $username, prompt: Text("Username").foregroundStyle(PocketStyle.secondaryInk))
+                            .textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .focused($focused, equals: .username).submitLabel(.next)
+                            .onSubmit { focused = .password }
+                            .pocketField()
+                        if submitted && username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("Enter your username.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                        }
+
+                        HStack(spacing: 8) {
+                            Group {
+                                if showPassword {
+                                    TextField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
+                                } else {
+                                    SecureField("", text: $password, prompt: Text("Password").foregroundStyle(PocketStyle.secondaryInk)).textContentType(signup ? .newPassword : .password)
+                                }
+                            }
+                            .focused($focused, equals: .password).submitLabel(.go)
+                            .onSubmit { authenticate() }
+                            Button { showPassword.toggle() } label: {
+                                Image(systemName: showPassword ? "eye.slash" : "eye").frame(width: 32, height: 32)
+                            }.accessibilityLabel(showPassword ? "Hide password" : "Show password")
+                        }.pocketField()
+                        if submitted && password.count < 8 {
+                            Text("Use at least 8 characters.").font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                        }
+                    }
+
+                    Button(action: authenticate) {
+                        PrimaryButtonLabel(title: backend.busy ? "Signing in…" : (signup ? "Create account" : "Sign in"))
+                    }.buttonStyle(PocketPressStyle()).disabled(backend.busy)
+
+                    if let error = backend.error {
+                        Label(error, systemImage: "exclamationmark.circle")
+                            .font(.pocketCaption).foregroundStyle(PocketStyle.danger)
+                    }
+
+                    DisclosureGroup("Connection") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            TextField("", text: $server, prompt: Text("Server address").foregroundStyle(PocketStyle.secondaryInk))
+                                .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().pocketField()
+                            Button("Use this server") { backend.changeServer(server) }.disabled(server == backend.address)
+                            Text("Changing servers signs you out.").font(.pocketCaption).foregroundStyle(PocketStyle.secondaryInk)
+                        }.padding(.top, 10)
+                    }
+                    .font(.pocketHeadline)
                 }
-                .font(.pocketHeadline)
+                .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 48)
+                .frame(maxWidth: 520).frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 20).padding(.top, 28).padding(.bottom, 48)
-            .frame(maxWidth: 520).frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
         .background(PocketStyle.canvas).foregroundStyle(PocketStyle.ink)
         .toolbar(.hidden, for: .navigationBar)
+        .pocketHeroStatusBar()
         .sensoryFeedback(.selection, trigger: signup)
         .onAppear { server = backend.address }
     }
