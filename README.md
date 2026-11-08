@@ -6,7 +6,7 @@ Pockett turns a prompt into a small app you can open and share in Pocket on iPho
 
 It currently supports lists, number trackers, and polls with up to eight fields. Apps use a shared page template; their data lives in SpacetimeDB.
 
-## Web apps with iPhone superpowers
+## Native iOS features
 
 **Record a walk with the screen locked. Put an app’s update on your Home Screen. Feel a native haptic when something happens.** Pocket gives hosted web apps a direct bridge to compiled iOS features through `window.pocketNative`.
 
